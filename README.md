@@ -2,7 +2,7 @@
 
 ## *Background*
 
-Our lab studies sleep in the context of addiction and dopamine. One of our recent [publications](https://www.nature.com/articles/s41386-020-00879-2) shows that dopamine uptake rates vary across the sleep wake cycle, and more recent data from our lab indicate that restoring sleep during withdrawal from cocaine reduces drug craving and normalizes striatal dopamine transmission.  Neat!
+Our lab studies sleep in the context of addiction and dopamine. One of our recent [publications](https://www.nature.com/articles/s41386-020-00879-2) shows that dopamine uptake rates vary across the sleep/wake cycle, and more recent data from our lab indicate that restoring sleep during withdrawal from cocaine reduces drug craving and normalizes striatal dopamine transmission.  Neat!
 
 As cool as sleep studies may be, in our lab they have historically been a pain in the butt to do. We typically hand-score the data, assigning each 10 second bin a score of Wake, None REM or REM. Scoring the data this way takes ~2 hours per 24hr recording. Considering we record each animal for 7+ days, that's 14+ hours of labor to score the data from just *one* rat. Not very efficient! My first goal for this project was to find a ML model that could generate scores from the raw data. This cut our analysis time down from 14 hours to a matter of minutes.
 
