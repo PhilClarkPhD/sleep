@@ -1,6 +1,6 @@
 # Sleep analysis and GUI
 
-##*Background*
+## *Background*
 
 Our lab studies sleep in the context of addiction and dopamine. One of our recent [publications](https://www.nature.com/articles/s41386-020-00879-2) shows that dopamine uptake rates vary across the sleep wake cycle, and more recent data from our lab indicate that restoring sleep during withdrawal from cocaine reduces drug craving and normalizes striatal dopamine transmission.  Neat!
 
@@ -12,7 +12,7 @@ In the end I was able to load my model into the GUI so that the user can load a 
 
 Future additions will include options to train a new model, evaluate model performance, and run batch analyses to make things even faster.
 
-##*In this repo...*
+## *In this repo...*
 * **GUI:** Download this folder and see the walkthrough video above if you want to open the app and play with some example data!
 * **pilot.ipynb:** A jupyter notebook in which I first played with loading the sleep data and generating power spectrum plots (critical for analysis!)
 * **sleep_functions.py:** This file contains the functions required for generating the power spectrum as well as the metrics that feed into the ML model. 
