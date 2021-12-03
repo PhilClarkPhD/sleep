@@ -14,6 +14,6 @@ Future additions will include options to train a new model, evaluate model perfo
 
 ## *In this repo...*
 * **GUI:** Download this folder and see the walkthrough video above if you want to open the app and play with some example data!
-* **pilot.ipynb:** A jupyter notebook in which I first played with loading the sleep data and generating power spectrum plots (critical for analysis!)
+* **pilot.ipynb:** A jupyter notebook in which I first played with loading the sleep data and generating power spectrum plots (critical for the analysis step!)
 * **sleep_functions.py:** This file contains the functions required for generating the power spectrum as well as the metrics that feed into the ML model. 
 * **sleep_app.py:** This file contains the PyQT code for running the application, including all plots, buttons, and uses threading to increase plotting speed
