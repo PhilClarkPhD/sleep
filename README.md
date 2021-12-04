@@ -1,6 +1,6 @@
 # Sleep analysis and GUI
 
-[walkthrough](https://www.youtube.com/watch?v=5LG8gb8FvUw)
+[![walkthrough]](https://www.youtube.com/watch?v=5LG8gb8FvUw)
 
 ## *Background*
 
