@@ -10,12 +10,12 @@ As cool as sleep studies may be, in our lab they have historically been a pain t
 
 The next issue to solve was related to the software we had been using to view and score our data. The program was slow, buggy, and prone to crashing. And upgrading to its newest version would have cost alot of $$$. As an alternative I generated a GUI in which users can load raw data and view plots containing eeg/emg signals, a hypnogram, a power spectrum, and a simple bar plot. This required learning PyQt and took alot of trial and error - but it was worth it!
 
-In the end I was able to load my model into the GUI so that the user can load a file, score it instantly, and then cruise through the data and see how well the model performed. See the walkthrough video above for a demonstration.
+In the end I was able to combine the model and the GUI, so that the user can load a file, score it instantly, and then cruise through the data and see how well the model performed. See the walkthrough video above for a demonstration. We'e calling this program Mora, after the monster that haunts sleeping people.
 
 Future additions will include options to train a new model, evaluate model performance, and run batch analyses to make things even faster.
 
 ## *In this repo...*
 * **pilot.ipynb:** A jupyter notebook in which I walk through loading the sleep data and generating power spectrum plots
-* **gui.py:** This file contains the PyQT code for running the application, including all plots, buttons, etc. See the walkthrough video above!
+* **Mora.py:** This file contains the PyQT code for running the application, including all plots, buttons, etc. See the walkthrough video above!
 * **sleep_functions.py:** This file contains the functions required for generating the power spectrum as well as the metrics that feed into the ML model. 
 * **sleep_model_120121.joblib:** This file contains the model parameters that we will load int the app to automatically score the data.
