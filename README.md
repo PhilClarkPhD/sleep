@@ -15,7 +15,7 @@ In the end I was able to load my model into the GUI so that the user can load a 
 Future additions will include options to train a new model, evaluate model performance, and run batch analyses to make things even faster.
 
 ## *In this repo...*
-* **pilot.ipynb:** A jupyter notebook in which I first played with loading the sleep data and generating power spectrum plots (critical for the analysis step!)
+* **pilot.ipynb:** A jupyter notebook in which I walk through loading the sleep data and generating power spectrum plots
 * **gui.py:** This file contains the PyQT code for running the application, including all plots, buttons, etc. See the walkthrough video above!
 * **sleep_functions.py:** This file contains the functions required for generating the power spectrum as well as the metrics that feed into the ML model. 
 * **sleep_model_120121.joblib:** This file contains the model parameters that we will load int the app to automatically score the data.
