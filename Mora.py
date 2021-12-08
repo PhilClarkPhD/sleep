@@ -6,25 +6,18 @@ import sys
 from scipy.io import wavfile
 import pandas as pd
 import numpy as np
-import sleep_functions_120121 as sleep
-import scipy.spatial.transform._rotation_groups  # Need this to avoid runtime error after compiling
+import sleep_functions_120821 as sleep
 from joblib import dump, load
-# import multiprocessing
-# import concurrent.futures
 
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 
-#How to integrate this?
-# with concurrent.futures.ProcessPoolExecutor() as executor:
-#     f1 = executor.submit(self.update_plots)
-#     f2 = executor.submit(self.hypnogram_func)
 
 class Window(QWidget):
     def __init__(self):
         super(Window, self).__init__()
         self.setGeometry(50, 50, 1125, 525)
-        self.setWindowTitle('Sleep Analysis')
+        self.setWindowTitle('Mora Sleep Analysis')
 
         # error box for selecting epoch out of range
         self.error_box = QMessageBox()
@@ -160,6 +153,10 @@ class Window(QWidget):
         self.window_size.currentTextChanged.connect(self.update_plots)
         button_layout.addWidget(self.window_size, 0, 2)
 
+        next_REM_btn = QPushButton('Next REM', self)
+        next_REM_btn.clicked.connect(self.next_rem)
+        button_layout.addWidget(next_REM_btn, 0,3)
+
         # Current epoch label
         self.epoch_win.setText("Epoch: {} ".format(self.epoch))
         button_layout.addWidget(self.epoch_win, 1, 3)
@@ -227,15 +224,17 @@ class Window(QWidget):
         self.update_plots()
         self.hypnogram_func()
 
+
     def load_scores(self):
         file = QFileDialog.getOpenFileName(self, 'Open .txt file', r'C:\\')
         file_path = file[0]
 
         score_import = pd.read_csv(file_path)
         if score_import.shape[1] > 2:
-            self.epoch_dict = score_import[[' Score']].iloc[:, 0].to_dict()
+            self.epoch_dict = dict(zip(score_import['epoch'].values,score_import[' Score'].values))
         else:
-            self.epoch_dict = score_import[['score']].iloc[:, 0].to_dict()
+            self.epoch_dict = dict(zip(score_import['epoch'].values,score_import['score'].values))
+
 
         self.update_plots()
         self.hypnogram_func()
@@ -253,6 +252,18 @@ class Window(QWidget):
         score_export = pd.DataFrame([self.epoch_dict.keys(), self.epoch_dict.values()]).T
         score_export.columns = ['epoch', 'score']
         score_export.to_csv(file_path + '.txt', sep=',', index=False)
+
+    def next_rem(self):
+        for key in range(self.epoch+1,self.epoch_list[-1]):
+            if not key in self.epoch_dict.keys():
+                pass
+            elif self.epoch_dict[key] == 'REM':
+                self.epoch = key
+                self.hypnogram_func()
+                self.update_plots()
+                break
+            else:
+                pass
 
     def clear_scores(self):
         val = self.warning.exec()
@@ -357,8 +368,10 @@ class Window(QWidget):
                 hypno_list.append(1)
             elif i == 'REM':
                 hypno_list.append(2)
-            else:
+            elif i == 'Unscored':
                 hypno_list.append(3)
+            else:
+                hypno_list.append(np.NaN)
         return self.hypnogram.plot(x=list(self.epoch_dict.keys()), y=hypno_list, pen=pg.mkPen('k', width=2), clear=True)
 
     def hypno_go(self):
@@ -393,7 +406,6 @@ class Window(QWidget):
             return self.unscored
 
     def keyPressEvent(self, event):
-
         if event.key() == 87:
             self.epoch_dict[self.epoch] = 'Wake'
             # print('Wake')
@@ -419,7 +431,7 @@ class Window(QWidget):
             self.epoch_dict[self.epoch] = 'Unscored'
             # print('Unscored')
             self.epoch += 1
-            # self.update_plots()
+            self.update_plots()
             self.hypnogram_func()
 
         elif event.key() == 16777234:

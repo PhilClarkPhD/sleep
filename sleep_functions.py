@@ -18,19 +18,18 @@ def compute_power(data, window=10, samplerate = 1000, freq_limit=40):
     INPUTS:
     data = dataframe with 'eeg' and 'emg' as columns
     window = window of time (in seconds) that you want to compute power spectrum for. Default=10
-    samplerate = samplerate at which data was collected, default = 1000
     freq_limit = maximum frequency (in Hz) that you want retained in the power spectrum. Default=40
     _______________________________________________________________________________________________
 
     OUTPUTS:
     eeg_power = dictionary wherein keys are epochs and values are power spectra for EEG
     emg_power = dictionary wherein keys are epochs and values are power spectra for EMG
-    EMG_amp = dictionary wherein keys are epochs and values are relative EEG amplitude versus baseline
-    EMG_amp = dictionary wherein keys are epoch and values are relative EMG amplitude versus baseline
+    EMG_amp = dictionary wherein keys are epochs and values are average of the absolute values from raw EMG signal 
+    EMG_amp = dictionary wherein keys are epoch and values are maximum EMG values from raw EMG signal
     '''
     
-    data_window = window * samplerate
-    power_len = freq_limit * 10
+    window = window * samplerate
+    freq_limit = freq_limit*10
     dt = 1/samplerate
     
     epoch=0
@@ -39,19 +38,19 @@ def compute_power(data, window=10, samplerate = 1000, freq_limit=40):
     EEG_amp = {}
     EMG_amp = {}
     
-    #Compute baseline EEG/EMG amplitudes for 30 sec (skipping first 10s)
-    wake_EEG = np.mean(np.absolute(data['eeg'][10000:40000]))
-    wake_EMG = np.mean(np.absolute(data['emg'][10000:40000]))
+    #Compute baseline EEG/EMG amplitudes
+    wake_EEG = np.mean(np.absolute(data['eeg'][:300000]))
+    wake_EMG = np.mean(np.absolute(data['emg'][:300000]))
     
-    for value in range(0,len(data),data_window):
+    for value in range(0,len(data),window):
         start = value
-        end = start + data_window
+        end = start + window
         
         #Select EEG and EMG data based on start and stop points
         EEG = np.array(data['eeg'][start:end])
         EMG = np.array(data['emg'][start:end])
         
-        #Calculate EMG_avg and EMG_max
+        #Calculate EEG_amp and EMG_amp and add to dictionaries
         EEG_amp[epoch] = np.mean(np.absolute(EEG)) / wake_EEG
         EMG_amp[epoch] = np.max(np.absolute(EMG)) / wake_EMG
         
@@ -61,12 +60,11 @@ def compute_power(data, window=10, samplerate = 1000, freq_limit=40):
         
         #Compute power spectrum
         eeg_Sxx = (2 * dt**2 / 10 * (eeg_xf*eeg_xf.conj())).real
-        eeg_Sxx = eeg_Sxx[0:power_len]
+        eeg_Sxx = eeg_Sxx[0:freq_limit]
         
         emg_Sxx = (2 * dt**2 / 10 * (emg_xf*emg_xf.conj())).real
-        emg_Sxx = emg_Sxx[0:power_len]
-
-        #add eeg and emg power spectra to dictionary
+        emg_Sxx = emg_Sxx[0:freq_limit]
+        
         eeg_power[epoch] = eeg_Sxx
         emg_power[epoch] = emg_Sxx
         
@@ -77,8 +75,8 @@ def compute_power(data, window=10, samplerate = 1000, freq_limit=40):
 # In[1]:
 
 
-#Smooth Sxx function
-def smooth_signal(eeg_power, emg_power, window_len=4, window_type='flat'):
+#Smooth the power spectrum
+def smooth_signal(eeg_power, emg_power, window_len=4, window='flat'):
     '''
     Smooths the power spectrum outputted by the compute_power function using a moving window.
     
@@ -86,12 +84,12 @@ def smooth_signal(eeg_power, emg_power, window_len=4, window_type='flat'):
     eeg_power = dictionary wherein keys are epochs and values are power spectra for EEG
     emg_power = dictionary wherein keys are epochs and values are power spectra for EMG
     window_len = size of smoothing window. Bigger numbers mean more smoothing. Default = 4
-    window_type = kind of smoothing function to be utilized. Default = 'flat'
+    window = kind of smoothing function to be utilized. Default = 'flat'
     _______________________________________________________________________________________
     
     OUTPUTS:
-    smoothed_eeg_dict = dictionary wherein keys are epochs and values are smoothed power spectra for EEG
-    smoothed_emg_dict = dictionary wherein keys are epochs and values are smoothed power spectra for EMG
+    smoothed_eeg_dict = dictionary wherein keys are epochs and value are smoothed power spectra for EEG
+    smoothed_emg_dict = dictionary wherein keys are epochs and value are smoothed power spectra for EMG
     '''
     
     smoothed_eeg = {}
@@ -112,16 +110,16 @@ def smooth_signal(eeg_power, emg_power, window_len=4, window_type='flat'):
         if window_len<3:
             return x_eeg, x_emg
 
-        if not window_type in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-            raise(ValueError, "Window must be one of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+        if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+            raise(ValueError, "Window is one of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
 
         s_eeg=np.r_[x_eeg[window_len-1:0:-1],x_eeg,x_eeg[-2:-window_len-1:-1]]
         s_emg=np.r_[x_emg[window_len-1:0:-1],x_emg,x_emg[-2:-window_len-1:-1]]
 
-        if window_type == 'flat': # Moving average
+        if window == 'flat': # Moving average
             w=np.ones(window_len,'d')
         else:
-            w=eval('np.'+window_type+'(window_len)')
+            w=eval('np.'+window+'(window_len)')
 
         y_eeg=np.convolve(w/w.sum(),s_eeg,mode='valid')
         y_emg=np.convolve(w/w.sum(),s_emg,mode='valid')
@@ -179,7 +177,7 @@ def compute_metrics(smoothed_eeg, freq_res = 0.1):
 
 
 def plot_confusion_matrix(y,y_predict,label_list):
-    "this function plots the confusion matrix and outputs the values of the matrix as an array, cm"
+    "this function plots the confusion matrix"
 
     cm = confusion_matrix(y, y_predict)
     ax= plt.subplot()
