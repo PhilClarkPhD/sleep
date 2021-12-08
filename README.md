@@ -10,7 +10,7 @@ As cool as sleep studies may be, in our lab they have historically been a pain t
 
 The next issue to solve was related to the software we had been using to view and score our data. The program was slow, buggy, and prone to crashing. And upgrading to its newest version would have cost alot of $$$. As an alternative I generated a GUI in which users can load raw data and view plots containing eeg/emg signals, a hypnogram, a power spectrum, and a simple bar plot. This required learning PyQt and took alot of trial and error - but it was worth it!
 
-In the end I was able to combine the model and the GUI, so that the user can load a file, score it instantly, and then cruise through the data and see how well the model performed. See the walkthrough video above for a demonstration. We're calling this program Mora, after the monster that haunts sleeping people.
+In the end I was able to combine the model and the GUI, so that the user can load a file, score it instantly, and then cruise through the data and see how well the model performed. See the walkthrough video above for a demonstration. We're calling this program Mora, after the kikimora - a monster that haunts people while they sleep 😵.
 
 Future additions will include options to train a new model, evaluate model performance, and run batch analyses to make things even faster.
 
