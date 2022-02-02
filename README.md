@@ -7,11 +7,11 @@ Run `python -m pip install -r requirements.txt`
 
 ## Running sample data
 1. Run `python Mora.py`
-2. Click 'load_data' and select 'sample_data.wav'
+2. Click 'load_data' and select `sample_data.wav`
 3. Click on the EEG graph and click the let and right arrow keys to move through the data
-4. In the model tab, click 'predict' to automatically score the data
+4. In the model tab, click `predict` to automatically score the data
 5. In the home tab, look through the data - press W,E,R,T to change the scores manually!
-6. Click 'save_scores' to save your scores 
+6. Click `save_scores` to save your scores 
 
 ## *In this repo...*
 * **Mora.py:** This file contains the PyQT code for running the application, including all plots, buttons, etc. See the walkthrough video above!
