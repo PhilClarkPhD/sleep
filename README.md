@@ -3,10 +3,10 @@
 [video walkthrough](https://www.youtube.com/watch?v=5LG8gb8FvUw)
 
 ## Setup
-Run 'python -m pip install -r requirements.txt'
+Run `python -m pip install -r requirements.txt`
 
 ## Running sample data
-1. Run 'python Mora.py'
+1. Run `python Mora.py`
 2. Click 'load_data' and select 'sample_data.wav'
 3. Click on the EEG graph and click the let and right arrow keys to move through the data
 4. In the model tab, click 'predict' to automatically score the data
