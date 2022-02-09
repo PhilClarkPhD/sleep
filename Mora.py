@@ -475,6 +475,7 @@ class Window(QWidget):
         if event.key() == 87:
             self.epoch_dict[self.epoch] = 0
             # 'Wake'
+            self.check_epoch(1)
             self.epoch += 1
             self.hypnogram_func()
             self.update_plots()
