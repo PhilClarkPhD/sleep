@@ -1,3 +1,17 @@
+'''
+Fixed:
+1. added 'current file:' and 'current score:' display so we know which file(s) are loaded
+2. increased font size to 20
+3. changed hypnogram plotting to use int for better speed. Converts int to string on export (self.convert_to_score) and
+    converts string to int on import (self.conver_to_num)
+4. fixed bugs related to select epoch button. No longer goes to 0 on cancel, no longer allows out-of-range selections
+5. fixed bug in eeg/emg navigation with key presses, raises error for out-of-range selections
+6. moved run() under 'if __name__==__main__:'
+7. created self.current_path to track directory locations and be compatible with Mac/Linux OS
+8. restricted load_data to .wav files and load_scores to .txt files
+'''
+
+
 import pyqtgraph as pg
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QPushButton, \
     QFileDialog, QLabel, QInputDialog, QMessageBox, QTabWidget, QVBoxLayout, \
@@ -8,28 +22,36 @@ import pandas as pd
 import numpy as np
 import sleep_functions_120821 as sleep
 from joblib import dump, load
+import os
 
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
+pg.setConfigOption('background', "w")
+pg.setConfigOption('foreground', "k")
 
+
+#starting path
+START_PATH = os.path.dirname(os.path.realpath(__file__))
 
 class Window(QWidget):
     def __init__(self):
         super(Window, self).__init__()
         self.setGeometry(50, 50, 1125, 525)
         self.setWindowTitle('Mora Sleep Analysis')
+        self.setStyleSheet("font-size: 20px;")
+
+        #path variables
+        self.current_path = START_PATH
 
         # error box for selecting epoch out of range
         self.error_box = QMessageBox()
         self.error_box.setIcon(QMessageBox.Critical)
 
-        # warning box for clearinf scores
+        # warning box for clearing scores
         self.warning = QMessageBox()
         self.warning.setIcon(QMessageBox.Warning)
         self.warning.setText('Are you sure you want to clear scores?')
         self.warning.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
 
-        #Model labels
+        # Model labels
         self.model_display = QLabel('Current_Model: None', self)
         self.scoring_complete = QLabel('',self)
 
@@ -81,8 +103,14 @@ class Window(QWidget):
         self.wake_center = pg.mkBrush(pg.intColor(20, alpha=70))
         self.unscored_center = pg.mkBrush(pg.intColor(50, alpha=50))
 
-        # epoch window
+        # epoch label
         self.epoch_win = QLabel("Epoch: {} ".format(self.epoch), self)
+
+        # current file label
+        self.file_win = QLabel('',self)
+
+        #current score label
+        self.score_win = QLabel('',self)
 
         # axes for raw eeg/emg plots
         self.raw_y_start = []
@@ -153,9 +181,16 @@ class Window(QWidget):
         self.window_size.currentTextChanged.connect(self.update_plots)
         button_layout.addWidget(self.window_size, 0, 2)
 
-        next_REM_btn = QPushButton('Next REM', self)
+        next_REM_btn = QPushButton('Next: {}'.format(''), self)
         next_REM_btn.clicked.connect(self.next_rem)
         button_layout.addWidget(next_REM_btn, 0,3)
+
+        #file name labels
+        self.file_win.setText('File: {}'.format('N/A'))
+        button_layout.addWidget(self.file_win,1,0)
+
+        self.score_win.setText('Scores: {}'.format('N/A'))
+        button_layout.addWidget(self.score_win,1,1)
 
         # Current epoch label
         self.epoch_win.setText("Epoch: {} ".format(self.epoch))
@@ -191,17 +226,23 @@ class Window(QWidget):
         return home
 
     def find_epoch(self):
-        num, ok = QInputDialog.getInt(self, 'Find epoch', 'enter epoch')
-        try:
+        num, ok = QInputDialog.getInt(self,
+                                      'Find epoch',
+                                      'Enter value between 0 and {}'.format(str(len(self.epoch_list)-1)),
+                                      value=self.epoch,
+                                      min=0,
+                                      max=len(self.epoch_list)-1)
+
+        if ok:
             self.epoch = num
             self.update_plots()
-        except KeyError:
-            self.error_box.setText('Epoch must be an integer between {} and {}'.format('0', str(len(self.epoch_list))))
-            self.error_box.exec_()
+
 
     def load_data(self):
-        file = QFileDialog.getOpenFileName(self, 'Open .wav file', r'C:\\')
+        file = QFileDialog.getOpenFileName(self, 'Open .wav file', self.current_path,'(*.wav)')
         file_path = file[0]
+        self.current_path = os.path.dirname(file_path)
+        self.file_win.setText('File: {}'.format(str(os.path.basename(file_path))))
 
         self.samplerate, data = wavfile.read(file_path)
         df = pd.DataFrame(data=data, columns=['eeg', 'emg'])
@@ -226,14 +267,16 @@ class Window(QWidget):
 
 
     def load_scores(self):
-        file = QFileDialog.getOpenFileName(self, 'Open .txt file', r'C:\\')
+        file = QFileDialog.getOpenFileName(self, 'Open .txt file', self.current_path, '(*.txt)')
         file_path = file[0]
+        self.current_path = os.path.dirname(file_path)
+        self.score_win.setText('Scores: {}'.format(str(os.path.basename(file_path))))
 
         score_import = pd.read_csv(file_path)
         if score_import.shape[1] > 2:
-            self.epoch_dict = dict(zip(score_import['epoch'].values,score_import[' Score'].values))
+            self.epoch_dict = dict(zip(score_import['Epoch #'].values - 1, map(self.convert_to_numders,score_import[' Score'].values))) # -1 to force epoch start at 0
         else:
-            self.epoch_dict = dict(zip(score_import['epoch'].values,score_import['score'].values))
+            self.epoch_dict = dict(zip(score_import['epoch'].values, map(self.convert_to_numbers,score_import['score'].values)))
 
 
         self.update_plots()
@@ -246,10 +289,12 @@ class Window(QWidget):
 
     def export_scores(self):
         name = str(self.name_file())
-        file = QFileDialog.getExistingDirectory(self, 'Select folder', r'C:\\')
+        file = QFileDialog.getExistingDirectory(self, 'Select folder', self.current_path)
         file_path = file + '/' + name
 
-        score_export = pd.DataFrame([self.epoch_dict.keys(), self.epoch_dict.values()]).T
+        converted_scores = map(self.convert_to_scores, self.epoch_dict.values())
+
+        score_export = pd.DataFrame([self.epoch_dict.keys(), converted_scores]).T
         score_export.columns = ['epoch', 'score']
         score_export.to_csv(file_path + '.txt', sep=',', index=False)
 
@@ -257,7 +302,7 @@ class Window(QWidget):
         for key in range(self.epoch+1,self.epoch_list[-1]):
             if not key in self.epoch_dict.keys():
                 pass
-            elif self.epoch_dict[key] == 'REM':
+            elif self.epoch_dict[key] == 2:
                 self.epoch = key
                 self.hypnogram_func()
                 self.update_plots()
@@ -268,11 +313,20 @@ class Window(QWidget):
     def clear_scores(self):
         val = self.warning.exec()
         if val == QMessageBox.Ok:
+            self.score_win.setText('Scores: {}'.format('N/A'))
             self.epoch_dict = {}
             self.hypnogram_func()
             self.update_plots()
         else:
             pass
+
+    def check_epoch(self, modifier: int) -> None:
+        new_epoch = self.epoch + modifier
+        if new_epoch not in range(0,len(self.epoch_list)):
+            self.error_box.setText('Not a valid epoch')
+            self.error_box.exec_()
+            raise KeyError('Not a valid epoch')
+
 
     def update_plots(self):
 
@@ -359,20 +413,32 @@ class Window(QWidget):
         self.hypno_line.sigPositionChangeFinished.connect(self.hypno_go)
         self.hypnogram.addItem(self.hypno_line)
 
+    def convert_to_scores(self, x:int) -> str:
+        if x == 0:
+            return 'Wake'
+        if x == 1:
+            return 'Non REM'
+        if x == 2:
+            return 'REM'
+        if x == 3:
+            return 'Unscored'
+        else:
+            return np.NaN
+
+    def convert_to_numbers(self, x:str) -> int:
+        if x == 'Wake':
+            return 0
+        if x == 'Non REM':
+            return 1
+        if x == 'REM':
+            return 2
+        if x == 'Unscored':
+            return 3
+        else:
+            return None
+
     def hypnogram_func(self):
-        hypno_list = []
-        for i in self.epoch_dict.values():
-            if i == 'Wake':
-                hypno_list.append(0)
-            elif i == 'Non REM':
-                hypno_list.append(1)
-            elif i == 'REM':
-                hypno_list.append(2)
-            elif i == 'Unscored':
-                hypno_list.append(3)
-            else:
-                hypno_list.append(np.NaN)
-        return self.hypnogram.plot(x=list(self.epoch_dict.keys()), y=hypno_list, pen=pg.mkPen('k', width=2), clear=True)
+        return self.hypnogram.plot(x=list(self.epoch_dict.keys()), y=list(self.epoch_dict.values()), pen=pg.mkPen('k', width=2), clear=True)
 
     def hypno_go(self):
         current_epoch = self.hypno_line.value()
@@ -381,19 +447,19 @@ class Window(QWidget):
 
     def color_scheme(self, epoch, center=False):
         try:
-            if self.epoch_dict[epoch] == 'REM' and not center:
+            if self.epoch_dict[epoch] == 2 and not center:
                 return self.rem
-            elif self.epoch_dict[epoch] == 'REM' and center:
+            elif self.epoch_dict[epoch] == 2 and center:
                 return self.rem_center
-            elif self.epoch_dict[epoch] == 'Non REM' and not center:
+            elif self.epoch_dict[epoch] == 1 and not center:
                 return self.non_rem
-            elif self.epoch_dict[epoch] == 'Non REM' and center:
+            elif self.epoch_dict[epoch] == 1 and center:
                 return self.non_rem_center
-            elif self.epoch_dict[epoch] == 'Wake' and not center:
+            elif self.epoch_dict[epoch] == 0 and not center:
                 return self.wake
-            elif self.epoch_dict[epoch] == 'Wake' and center:
+            elif self.epoch_dict[epoch] == 0 and center:
                 return self.wake_center
-            elif self.epoch_dict[epoch] == 'Unscored' and center:
+            elif self.epoch_dict[epoch] == 3 and center:
                 return self.unscored_center
             elif self.epoch_dict[epoch] == [] and center:
                 return self.unscored_center
@@ -407,40 +473,49 @@ class Window(QWidget):
 
     def keyPressEvent(self, event):
         if event.key() == 87:
-            self.epoch_dict[self.epoch] = 'Wake'
-            # print('Wake')
+            self.epoch_dict[self.epoch] = 0
+            # 'Wake'
             self.epoch += 1
-            self.update_plots()
             self.hypnogram_func()
+            self.update_plots()
+
 
         elif event.key() == 69:
-            self.epoch_dict[self.epoch] = 'Non REM'
-            # print('Non REM')
+            self.epoch_dict[self.epoch] = 1
+            # 'Non REM'
+            self.check_epoch(1)
             self.epoch += 1
-            self.update_plots()
             self.hypnogram_func()
+            self.update_plots()
+
 
         elif event.key() == 82:
-            self.epoch_dict[self.epoch] = 'REM'
-            # print('REM')
+            self.epoch_dict[self.epoch] = 2
+            # 'REM'
+            self.check_epoch(1)
             self.epoch += 1
-            self.update_plots()
             self.hypnogram_func()
+            self.update_plots()
+
 
         elif event.key() == 84:
-            self.epoch_dict[self.epoch] = 'Unscored'
-            # print('Unscored')
+            self.epoch_dict[self.epoch] = 3
+            # 'Unscored'
+            self.check_epoch(1)
             self.epoch += 1
-            self.update_plots()
             self.hypnogram_func()
+            self.update_plots()
+
 
         elif event.key() == 16777234:
-            # print('left arrow')
+            # left arrow
+            self.check_epoch(-1)
             self.epoch -= 1
             self.update_plots()
 
         elif event.key() == 16777236:
-            # print('right arrow')
+            # right arrow
+            self.check_epoch(1)
             self.epoch += 1
             self.update_plots()
 
@@ -490,5 +565,5 @@ def run():
     sys.exit(app.exec_())
 
 
-
-run()
+if __name__ == '__main__':
+    run()
