@@ -12,7 +12,7 @@ Run `python -m pip install -r requirements.txt`
 4. To see some example scores, click `Load Scores` and select `sample_scores.txt` in the sample data folder
 5. Press W,E,R,T to change the scores manually and save scores to a .txt file by clicking `Export Scores`
 6. Now let's use machine learning to automatically score the data - clear the current scores by clicking `Clear Scores`
-7. In the model tab, click `Score Data` to automatically score the data, or load a new model with `Load Model`
+7. In the model tab, click `Load Model` and select the .joblib file in sample data folder, then click `Score Data` to automatically score the data
 8. Go back to the home tab to see how well the model worked!
 
 ## *In this repo...*
