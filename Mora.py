@@ -1,16 +1,15 @@
 '''
-Fixed:
-1. added 'current file:' and 'current score:' display so we know which file(s) are loaded
-2. increased font size to 20
-3. changed hypnogram plotting to use int for better speed. Converts int to string on export (self.convert_to_score) and
-    converts string to int on import (self.conver_to_num)
-4. fixed bugs related to select epoch button. No longer goes to 0 on cancel, no longer allows out-of-range selections
-5. fixed bug in eeg/emg navigation with key presses, raises error for out-of-range selections
-6. moved run() under 'if __name__==__main__:'
-7. created self.current_path to track directory locations and be compatible with Mac/Linux OS
-8. restricted load_data to .wav files and load_scores to .txt files
-'''
+TODO:
+1. refactor similar to fp_gui
+3. make 'NEXT' button selectable ['NREM','WAKE','REM','Unscored']
+5. Modeling
+    a. allow file browsing to select model (.joblib file)
+    b. display key metrics of model performance on test set (accuracy, conf matrix, f1, jaccard, etc.)
+    c. Allow training and saving of new model from current data/score set
+    d. Allow training/selection of best model?
+    e. Set up system for comparing two set of scores)
 
+'''
 
 import pyqtgraph as pg
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QPushButton, \
@@ -20,25 +19,25 @@ import sys
 from scipy.io import wavfile
 import pandas as pd
 import numpy as np
-import sleep_functions_120821 as sleep
+import sleep_functions as sleep
 from joblib import dump, load
 import os
 
 pg.setConfigOption('background', "w")
 pg.setConfigOption('foreground', "k")
 
-
-#starting path
+# starting path
 START_PATH = os.path.dirname(os.path.realpath(__file__))
+
 
 class Window(QWidget):
     def __init__(self):
-        super(Window, self).__init__()
+        super().__init__()
         self.setGeometry(50, 50, 1125, 525)
         self.setWindowTitle('Mora Sleep Analysis')
         self.setStyleSheet("font-size: 20px;")
 
-        #path variables
+        # path variables
         self.current_path = START_PATH
 
         # error box for selecting epoch out of range
@@ -53,7 +52,7 @@ class Window(QWidget):
 
         # Model labels
         self.model_display = QLabel('Current_Model: None', self)
-        self.scoring_complete = QLabel('',self)
+        self.scoring_complete = QLabel('', self)
 
         # data objects
         self.epoch_dict = {}
@@ -107,10 +106,10 @@ class Window(QWidget):
         self.epoch_win = QLabel("Epoch: {} ".format(self.epoch), self)
 
         # current file label
-        self.file_win = QLabel('',self)
+        self.file_win = QLabel('', self)
 
-        #current score label
-        self.score_win = QLabel('',self)
+        # current score label
+        self.score_win = QLabel('', self)
 
         # axes for raw eeg/emg plots
         self.raw_y_start = []
@@ -126,11 +125,11 @@ class Window(QWidget):
         self.delta_vals = self.metrics[['delta_rel']].values
         self.theta_vals = self.metrics[['theta_rel']].values
 
-        #Model objects
+        # Model objects
         self.model = np.NaN
         self.scores = np.NaN
 
-        #Set Layout
+        # Set Layout
         layout = QVBoxLayout()
         self.setLayout(layout)
 
@@ -183,14 +182,14 @@ class Window(QWidget):
 
         next_REM_btn = QPushButton('Next: {}'.format(''), self)
         next_REM_btn.clicked.connect(self.next_rem)
-        button_layout.addWidget(next_REM_btn, 0,3)
+        button_layout.addWidget(next_REM_btn, 0, 3)
 
-        #file name labels
+        # file name labels
         self.file_win.setText('File: {}'.format('N/A'))
-        button_layout.addWidget(self.file_win,1,0)
+        button_layout.addWidget(self.file_win, 1, 0)
 
         self.score_win.setText('Scores: {}'.format('N/A'))
-        button_layout.addWidget(self.score_win,1,1)
+        button_layout.addWidget(self.score_win, 1, 1)
 
         # Current epoch label
         self.epoch_win.setText("Epoch: {} ".format(self.epoch))
@@ -228,18 +227,17 @@ class Window(QWidget):
     def find_epoch(self):
         num, ok = QInputDialog.getInt(self,
                                       'Find epoch',
-                                      'Enter value between 0 and {}'.format(str(len(self.epoch_list)-1)),
+                                      'Enter value between 0 and {}'.format(str(len(self.epoch_list) - 1)),
                                       value=self.epoch,
                                       min=0,
-                                      max=len(self.epoch_list)-1)
+                                      max=len(self.epoch_list) - 1)
 
         if ok:
             self.epoch = num
             self.update_plots()
 
-
     def load_data(self):
-        file = QFileDialog.getOpenFileName(self, 'Open .wav file', self.current_path,'(*.wav)')
+        file = QFileDialog.getOpenFileName(self, 'Open .wav file', self.current_path, '(*.wav)')
         file_path = file[0]
         self.current_path = os.path.dirname(file_path)
         self.file_win.setText('File: {}'.format(str(os.path.basename(file_path))))
@@ -265,7 +263,6 @@ class Window(QWidget):
         self.update_plots()
         self.hypnogram_func()
 
-
     def load_scores(self):
         file = QFileDialog.getOpenFileName(self, 'Open .txt file', self.current_path, '(*.txt)')
         file_path = file[0]
@@ -274,10 +271,11 @@ class Window(QWidget):
 
         score_import = pd.read_csv(file_path)
         if score_import.shape[1] > 2:
-            self.epoch_dict = dict(zip(score_import['Epoch #'].values - 1, map(self.convert_to_numders,score_import[' Score'].values))) # -1 to force epoch start at 0
+            self.epoch_dict = dict(zip(score_import['Epoch #'].values - 1, map(self.convert_to_numbers, score_import[
+                ' Score'].values)))  # -1 to force epoch start at 0
         else:
-            self.epoch_dict = dict(zip(score_import['epoch'].values, map(self.convert_to_numbers,score_import['score'].values)))
-
+            self.epoch_dict = dict(
+                zip(score_import['epoch'].values, map(self.convert_to_numbers, score_import['score'].values)))
 
         self.update_plots()
         self.hypnogram_func()
@@ -285,7 +283,10 @@ class Window(QWidget):
     def name_file(self):
         get_name = QInputDialog()
         name, ok = get_name.getText(self, 'Enter file name', 'Enter file name')
-        return name
+        if ok:
+            return name
+        else:
+            raise ValueError('Not a valid input')
 
     def export_scores(self):
         name = str(self.name_file())
@@ -299,8 +300,8 @@ class Window(QWidget):
         score_export.to_csv(file_path + '.txt', sep=',', index=False)
 
     def next_rem(self):
-        for key in range(self.epoch+1,self.epoch_list[-1]):
-            if not key in self.epoch_dict.keys():
+        for key in range(self.epoch + 1, self.epoch_list[-1]):
+            if key not in self.epoch_dict.keys():
                 pass
             elif self.epoch_dict[key] == 2:
                 self.epoch = key
@@ -322,11 +323,10 @@ class Window(QWidget):
 
     def check_epoch(self, modifier: int) -> None:
         new_epoch = self.epoch + modifier
-        if new_epoch not in range(0,len(self.epoch_list)):
+        if new_epoch not in range(0, len(self.epoch_list)):
             self.error_box.setText('Not a valid epoch')
             self.error_box.exec_()
             raise KeyError('Not a valid epoch')
-
 
     def update_plots(self):
 
@@ -413,7 +413,8 @@ class Window(QWidget):
         self.hypno_line.sigPositionChangeFinished.connect(self.hypno_go)
         self.hypnogram.addItem(self.hypno_line)
 
-    def convert_to_scores(self, x:int) -> str:
+    @staticmethod
+    def convert_to_scores(x: int) -> str:
         if x == 0:
             return 'Wake'
         if x == 1:
@@ -425,7 +426,8 @@ class Window(QWidget):
         else:
             return np.NaN
 
-    def convert_to_numbers(self, x:str) -> int:
+    @staticmethod
+    def convert_to_numbers(x: str) -> int:
         if x == 'Wake':
             return 0
         if x == 'Non REM':
@@ -438,7 +440,8 @@ class Window(QWidget):
             return None
 
     def hypnogram_func(self):
-        return self.hypnogram.plot(x=list(self.epoch_dict.keys()), y=list(self.epoch_dict.values()), pen=pg.mkPen('k', width=2), clear=True)
+        return self.hypnogram.plot(x=list(self.epoch_dict.keys()), y=list(self.epoch_dict.values()),
+                                   pen=pg.mkPen('k', width=2), clear=True)
 
     def hypno_go(self):
         current_epoch = self.hypno_line.value()
@@ -480,8 +483,7 @@ class Window(QWidget):
             self.hypnogram_func()
             self.update_plots()
 
-
-        elif event.key() == 69:
+        if event.key() == 69:
             self.epoch_dict[self.epoch] = 1
             # 'Non REM'
             self.check_epoch(1)
@@ -489,8 +491,7 @@ class Window(QWidget):
             self.hypnogram_func()
             self.update_plots()
 
-
-        elif event.key() == 82:
+        if event.key() == 82:
             self.epoch_dict[self.epoch] = 2
             # 'REM'
             self.check_epoch(1)
@@ -498,8 +499,7 @@ class Window(QWidget):
             self.hypnogram_func()
             self.update_plots()
 
-
-        elif event.key() == 84:
+        if event.key() == 84:
             self.epoch_dict[self.epoch] = 3
             # 'Unscored'
             self.check_epoch(1)
@@ -507,56 +507,61 @@ class Window(QWidget):
             self.hypnogram_func()
             self.update_plots()
 
-
-        elif event.key() == 16777234:
+        if event.key() == 16777234:
             # left arrow
             self.check_epoch(-1)
             self.epoch -= 1
             self.update_plots()
 
-        elif event.key() == 16777236:
+        if event.key() == 16777236:
             # right arrow
             self.check_epoch(1)
             self.epoch += 1
             self.update_plots()
-
 
     def model_tab(self):
         model_tab = QWidget()
 
         layout = QGridLayout()
 
-        load_model_btn = QPushButton('Load Model',self)
+        load_model_btn = QPushButton('Load Model', self)
         load_model_btn.clicked.connect(self.load_model)
         layout.addWidget(load_model_btn, 0, 0)
 
-
-        score_data_btn = QPushButton('Score Data',self)
+        score_data_btn = QPushButton('Score Data', self)
         score_data_btn.clicked.connect(self.score_data)
         layout.addWidget(score_data_btn, 0, 1)
 
-        layout.addWidget(self.model_display,1, 0)
-        layout.addWidget(self.scoring_complete,1, 1)
+        layout.addWidget(self.model_display, 1, 0)
+        layout.addWidget(self.scoring_complete, 1, 1)
 
         model_tab.setLayout(layout)
 
         return model_tab
 
     def load_model(self):
-        self.model = load('sleep_model_120121.joblib')
-        self.model_display.setText('Current_Model: {}'.format(self.model))
+        file = QFileDialog.getOpenFileName(self, 'Open .wav file', self.current_path, '(*.joblib *.pkl)')
+        file_path = file[0]
+        self.current_path = os.path.dirname(file_path)
+
+        self.model = load(os.path.realpath(file_path))
+        self.model_display.setText('Current_Model: {}'.format(str(os.path.basename(file_path))))
         self.scoring_complete.setText('')
 
     def score_data(self):
+
         try:
             self.scores = self.model.predict(self.metrics.values)
+            self.scores = map(self.convert_to_numbers, self.scores)
 
-            self.epoch_dict = dict(zip(self.epoch_list,self.scores))
+            self.epoch_dict = dict(zip(self.epoch_list, self.scores))
             self.update_plots()
             self.hypnogram_func()
             self.scoring_complete.setText('Scoring Complete!')
+
         except ValueError:
-            self.scoring_complete.setText('Must load data first!')
+            self.error_box.setText('Must load data first!')
+            self.error_box.exec_()
 
 
 def run():

@@ -1,0 +1,545 @@
+epoch,score
+0,Wake
+1,Wake
+2,Wake
+3,Wake
+4,Wake
+5,Wake
+6,Wake
+7,Wake
+8,Wake
+9,Wake
+10,Wake
+11,Wake
+12,Wake
+13,Wake
+14,Wake
+15,Wake
+16,Wake
+17,Wake
+18,Wake
+19,Wake
+20,Wake
+21,Wake
+22,Wake
+23,Wake
+24,Wake
+25,Wake
+26,Wake
+27,Wake
+28,Wake
+29,Wake
+30,Wake
+31,Wake
+32,Wake
+33,Wake
+34,Wake
+35,Wake
+36,Wake
+37,Wake
+38,Wake
+39,Wake
+40,Wake
+41,Wake
+42,Wake
+43,Wake
+44,Wake
+45,Wake
+46,Wake
+47,Wake
+48,Wake
+49,Wake
+50,Wake
+51,Wake
+52,Wake
+53,Wake
+54,Wake
+55,Wake
+56,Wake
+57,Wake
+58,Wake
+59,Wake
+60,Wake
+61,Wake
+62,Wake
+63,Non REM
+64,Non REM
+65,Non REM
+66,Non REM
+67,Non REM
+68,REM
+69,REM
+70,REM
+71,REM
+72,REM
+73,REM
+74,REM
+75,REM
+76,REM
+77,REM
+78,REM
+79,Wake
+80,Wake
+81,Wake
+82,Wake
+83,Wake
+84,Wake
+85,Wake
+86,Wake
+87,Wake
+88,Wake
+89,Wake
+90,Wake
+91,Wake
+92,Wake
+93,Wake
+94,Non REM
+95,Non REM
+96,Non REM
+97,Non REM
+98,Non REM
+99,Non REM
+100,Non REM
+101,Non REM
+102,Non REM
+103,Wake
+104,Wake
+105,Wake
+106,Wake
+107,Wake
+108,Wake
+109,Wake
+110,Wake
+111,Wake
+112,Wake
+113,Wake
+114,Wake
+115,Wake
+116,Wake
+117,Wake
+118,Wake
+119,Wake
+120,Non REM
+121,Non REM
+122,Non REM
+123,Non REM
+124,Non REM
+125,Non REM
+126,Non REM
+127,Non REM
+128,Wake
+129,Wake
+130,Wake
+131,Wake
+132,Wake
+133,Wake
+134,Wake
+135,Wake
+136,Wake
+137,Wake
+138,Wake
+139,Wake
+140,Wake
+141,Non REM
+142,Non REM
+143,Non REM
+144,Non REM
+145,Non REM
+146,Non REM
+147,Non REM
+148,Non REM
+149,Wake
+150,Wake
+151,Wake
+152,Wake
+153,Wake
+154,Wake
+155,Wake
+156,Wake
+157,Wake
+158,Wake
+159,Wake
+160,Wake
+161,Wake
+162,Wake
+163,Wake
+164,Wake
+165,Wake
+166,Wake
+167,Wake
+168,Wake
+169,Wake
+170,Wake
+171,Wake
+172,Wake
+173,Wake
+174,Wake
+175,Wake
+176,Wake
+177,Wake
+178,Non REM
+179,Wake
+180,Wake
+181,Non REM
+182,Non REM
+183,Non REM
+184,Non REM
+185,Non REM
+186,Non REM
+187,REM
+188,REM
+189,REM
+190,REM
+191,REM
+192,REM
+193,REM
+194,REM
+195,REM
+196,REM
+197,REM
+198,REM
+199,REM
+200,REM
+201,REM
+202,REM
+203,REM
+204,REM
+205,REM
+206,REM
+207,REM
+208,Wake
+209,Wake
+210,Wake
+211,Wake
+212,Wake
+213,Wake
+214,Wake
+215,Wake
+216,Wake
+217,Wake
+218,Wake
+219,Wake
+220,Wake
+221,Wake
+222,Wake
+223,Wake
+224,Wake
+225,Wake
+226,Non REM
+227,Non REM
+228,Non REM
+229,Non REM
+230,Non REM
+231,Non REM
+232,Non REM
+233,Non REM
+234,Non REM
+235,Non REM
+236,Non REM
+237,Non REM
+238,Non REM
+239,Non REM
+240,Non REM
+241,Non REM
+242,REM
+243,REM
+244,REM
+245,REM
+246,Wake
+247,Wake
+248,Wake
+249,Wake
+250,Wake
+251,Wake
+252,Wake
+253,Wake
+254,Wake
+255,Non REM
+256,Non REM
+257,Non REM
+258,Non REM
+259,Non REM
+260,Non REM
+261,Non REM
+262,Non REM
+263,Non REM
+264,Non REM
+265,Non REM
+266,Non REM
+267,Non REM
+268,Non REM
+269,Non REM
+270,Non REM
+271,Non REM
+272,Non REM
+273,Non REM
+274,Non REM
+275,Non REM
+276,Non REM
+277,Non REM
+278,Non REM
+279,Non REM
+280,Non REM
+281,Non REM
+282,Non REM
+283,Non REM
+284,Non REM
+285,Non REM
+286,Non REM
+287,Non REM
+288,Non REM
+289,Non REM
+290,Non REM
+291,Non REM
+292,Non REM
+293,Non REM
+294,Non REM
+295,Non REM
+296,Non REM
+297,Non REM
+298,Non REM
+299,Non REM
+300,Non REM
+301,Non REM
+302,Non REM
+303,Non REM
+304,Non REM
+305,Non REM
+306,Non REM
+307,Non REM
+308,Non REM
+309,Non REM
+310,Non REM
+311,Non REM
+312,Non REM
+313,Non REM
+314,Non REM
+315,Non REM
+316,Non REM
+317,Wake
+318,Wake
+319,Wake
+320,Wake
+321,Wake
+322,Non REM
+323,Non REM
+324,Non REM
+325,Non REM
+326,Non REM
+327,Non REM
+328,Non REM
+329,Non REM
+330,Non REM
+331,Non REM
+332,Non REM
+333,Non REM
+334,Non REM
+335,Non REM
+336,Non REM
+337,Non REM
+338,Non REM
+339,Non REM
+340,Wake
+341,Wake
+342,Wake
+343,Wake
+344,Wake
+345,Wake
+346,Wake
+347,Wake
+348,Wake
+349,Wake
+350,Wake
+351,Non REM
+352,Non REM
+353,Non REM
+354,Non REM
+355,Non REM
+356,Non REM
+357,Non REM
+358,Non REM
+359,Non REM
+360,Non REM
+361,REM
+362,REM
+363,REM
+364,REM
+365,REM
+366,REM
+367,REM
+368,REM
+369,REM
+370,REM
+371,REM
+372,REM
+373,REM
+374,REM
+375,REM
+376,REM
+377,REM
+378,REM
+379,REM
+380,Wake
+381,Wake
+382,Wake
+383,Wake
+384,Wake
+385,Wake
+386,Wake
+387,Wake
+388,Non REM
+389,Non REM
+390,Non REM
+391,Non REM
+392,Wake
+393,Wake
+394,Wake
+395,Wake
+396,Wake
+397,Wake
+398,Wake
+399,Wake
+400,Wake
+401,Wake
+402,Wake
+403,Wake
+404,Wake
+405,Wake
+406,Wake
+407,Wake
+408,Wake
+409,Non REM
+410,Non REM
+411,Non REM
+412,Non REM
+413,Non REM
+414,Non REM
+415,Non REM
+416,Non REM
+417,Non REM
+418,Non REM
+419,Non REM
+420,Non REM
+421,Wake
+422,Wake
+423,Wake
+424,Wake
+425,Wake
+426,Wake
+427,Wake
+428,Non REM
+429,Non REM
+430,Non REM
+431,Non REM
+432,Non REM
+433,Non REM
+434,Non REM
+435,Non REM
+436,Non REM
+437,Non REM
+438,Non REM
+439,Non REM
+440,Non REM
+441,Non REM
+442,Non REM
+443,Non REM
+444,Non REM
+445,Non REM
+446,Non REM
+447,Wake
+448,Wake
+449,Wake
+450,Wake
+451,Wake
+452,Wake
+453,Wake
+454,Wake
+455,Wake
+456,Wake
+457,Wake
+458,Wake
+459,Wake
+460,Wake
+461,Wake
+462,Wake
+463,Wake
+464,Wake
+465,Wake
+466,Wake
+467,Wake
+468,Wake
+469,Wake
+470,Wake
+471,Wake
+472,Wake
+473,Wake
+474,Wake
+475,Wake
+476,Wake
+477,Wake
+478,Wake
+479,Wake
+480,Wake
+481,Wake
+482,Wake
+483,Wake
+484,Wake
+485,Wake
+486,Wake
+487,Wake
+488,Wake
+489,Wake
+490,Wake
+491,Wake
+492,Wake
+493,Wake
+494,Wake
+495,Wake
+496,Wake
+497,Wake
+498,Wake
+499,Wake
+500,Wake
+501,Wake
+502,Wake
+503,Wake
+504,Wake
+505,Wake
+506,Wake
+507,Wake
+508,Wake
+509,Wake
+510,Wake
+511,Wake
+512,Wake
+513,Wake
+514,Wake
+515,Wake
+516,Wake
+517,Wake
+518,Wake
+519,Wake
+520,Non REM
+521,Non REM
+522,Non REM
+523,REM
+524,REM
+525,REM
+526,REM
+527,REM
+528,REM
+529,REM
+530,REM
+531,REM
+532,REM
+533,REM
+534,REM
+535,REM
+536,REM
+537,Wake
+538,Wake
+539,Wake
+540,Wake
+541,Wake
+542,Wake
+543,Wake
