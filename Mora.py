@@ -57,7 +57,7 @@ class Window(QWidget):
         # data objects
         self.epoch_dict = {}
         self.df = pd.DataFrame(columns=['eeg', 'emg'])
-        self.metrics = pd.DataFrame(columns=['EEG_amp', 'EMG_amp', 'delta_rel', 'theta_rel'])
+        self.metrics = pd.DataFrame(columns=['delta_rel', 'theta_rel', 'theta_over_delta'])
         self.samplerate = np.NaN
         self.epoch = 0
         self.epoch_list = []
@@ -243,21 +243,18 @@ class Window(QWidget):
         self.file_win.setText('File: {}'.format(str(os.path.basename(file_path))))
 
         self.samplerate, data = wavfile.read(file_path)
-        df = pd.DataFrame(data=data, columns=['eeg', 'emg'])
-        self.df = df
-        self.eeg_y = df['eeg']
-        self.emg_y = df['emg']
+        self.df = pd.DataFrame(data=data, columns=['eeg', 'emg'])
+        self.eeg_y = self.df['eeg']
+        self.emg_y = self.df['emg']
 
-        # Compute power spectrum, metrics
-        eeg_fft, emg_fft, eeg_amp, emg_amp = sleep.compute_power(df, samplerate=self.samplerate)
-        smoothed_eeg, smoothed_emg = sleep.smooth_signal(eeg_fft, emg_fft)
-        metrics = pd.DataFrame.from_dict(sleep.compute_metrics(smoothed_eeg)).T
-        metrics.columns = ['delta_rel', 'theta_rel']
-        metrics['EEG_amp'] = eeg_amp.values()
-        metrics['EMG_amp'] = eeg_amp.values()
-        self.metrics = metrics[['EEG_amp', 'EMG_amp', 'delta_rel', 'theta_rel']]
+        # Compute power spectrum, relative power metrics
+        eeg_power, emg_power = sleep.compute_power(self.df, samplerate=self.samplerate)
+        smoothed_eeg, smoothed_emg = sleep.smooth_signal(eeg_power, emg_power)
+        relative_power = sleep.compute_relative_power(smoothed_eeg)
 
-        self.epoch_list = metrics.index
+        self.metrics = relative_power[['delta_rel', 'theta_rel', 'theta_over_delta']]
+
+        self.epoch_list = relative_power.index
         self.eeg_power = smoothed_eeg
         self.emg_power = smoothed_emg
         self.update_plots()
@@ -448,7 +445,7 @@ class Window(QWidget):
         self.epoch = round(current_epoch)
         return self.update_plots()
 
-    def color_scheme(self, epoch, center=False):
+    def color_scheme(self, epoch: int, center: bool = False):
         try:
             if self.epoch_dict[epoch] == 2 and not center:
                 return self.rem
@@ -474,7 +471,7 @@ class Window(QWidget):
         except KeyError:
             return self.unscored
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event: int):
         if event.key() == 87:
             self.epoch_dict[self.epoch] = 0
             # 'Wake'
