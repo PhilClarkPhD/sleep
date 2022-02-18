@@ -19,6 +19,7 @@ Run `python -m pip install -r requirements.txt`
 * **Mora.py:** This file contains the PyQT code for running the application, including all plots, buttons, etc. See the walkthrough video above!
 * **sleep_functions.py:** This file contains the functions required for generating the power spectrum as well as the metrics that feed ML model. 
 * **sample data:** This folder contains sample data, scores, and model to play with!
+* **requirements.txt:** Dependencies for running this program
 
 ## *Background*
 Our lab studies sleep in the context of addiction and dopamine. One of our recent [publications](https://www.nature.com/articles/s41386-020-00879-2) shows that dopamine uptake rates vary across the sleep/wake cycle, and more recent data from our lab indicate that restoring sleep during withdrawal from cocaine reduces drug craving and normalizes striatal dopamine transmission.  Pretty neat!
