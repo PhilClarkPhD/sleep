@@ -1,6 +1,8 @@
-'''
+"""
 TODO:
 1. refactor similar to fp_gui
+    a. make sure computed metrics match those of model
+    b. add in necessary metrics in the model tab
 3. make 'NEXT' button selectable ['NREM','WAKE','REM','Unscored']
 5. Modeling
     a. allow file browsing to select model (.joblib file)
@@ -9,18 +11,19 @@ TODO:
     d. Allow training/selection of best model?
     e. Set up system for comparing two set of scores)
 
-'''
+"""
 
 import pyqtgraph as pg
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QPushButton, \
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, \
     QFileDialog, QLabel, QInputDialog, QMessageBox, QTabWidget, QVBoxLayout, \
-    QGridLayout, QCheckBox, QComboBox, QHBoxLayout
+    QGridLayout, QComboBox, QHBoxLayout
+from PyQt5.QtGui import QKeyEvent
 import sys
 from scipy.io import wavfile
 import pandas as pd
 import numpy as np
 import sleep_functions as sleep
-from joblib import dump, load
+from joblib import load
 import os
 
 pg.setConfigOption('background', "w")
@@ -60,20 +63,21 @@ class Window(QWidget):
         self.metrics = pd.DataFrame(columns=['delta_rel', 'theta_rel', 'theta_over_delta'])
         self.samplerate = np.NaN
         self.epoch = 0
+        self.window_num = 5
+        self.array_size = np.NaN
+        self.window_start = np.NaN
+        self.window_end = np.NaN
         self.epoch_list = []
         self.eeg_power = {}
         self.emg_power = {}
         self.eeg_y = []
         self.emg_y = []
 
-        # plot objects
+        # create plot objects in window
         self.window_size = QComboBox(self)
-        self.window_num = 5
-        self.window_start = self.epoch * 10000
-        self.window_end = self.window_start + 10000
         self.eeg_plot = pg.PlotWidget(self, title='EEG')
-        self.line1 = pg.InfiniteLine(pos=5, movable=True, angle=0, pen=pg.mkPen(width=3, color='r'))
-        self.line2 = pg.InfiniteLine(pos=-5, movable=True, angle=0, pen=pg.mkPen(width=3, color='r'))
+        self.line1 = pg.InfiniteLine(pos=80, movable=True, angle=0, pen=pg.mkPen(width=3, color='r'))
+        self.line2 = pg.InfiniteLine(pos=-80, movable=True, angle=0, pen=pg.mkPen(width=3, color='r'))
         self.emg_plot = pg.PlotWidget(self, title='EMG')
         self.eeg_power_plot = pg.PlotWidget(self, title='Power Spectrum')
         self.eeg_bar_plot = pg.PlotWidget(self, title='Relative Power')
@@ -81,14 +85,11 @@ class Window(QWidget):
         self.rel_delta = pg.BarGraphItem(x=[], height=[], width=0.6)
         self.rel_theta = pg.BarGraphItem(x=[], height=[], width=0.6)
         self.labels = {0: 'delta', 1: 'theta'}
-        self.ax = self.eeg_bar_plot.getAxis('bottom')
-        self.ax.setTicks([self.labels.items()])
+        (self.eeg_bar_plot.getAxis('bottom')).setTicks([self.labels.items()])
 
         self.hypnogram = pg.PlotWidget(self, title='Hypnogram')
-        self.hypno_y = []
         self.hyp_labels = {0: 'Wake', 1: 'Non REM', 2: 'REM', 3: 'Unscored'}
-        self.hypno_y_ax = self.hypnogram.getAxis('left')
-        self.hypno_y_ax.setTicks([self.hyp_labels.items()])
+        (self.hypnogram.getAxis('left')).setTicks([self.hyp_labels.items()])
         self.hypno_line = pg.InfiniteLine(pos=self.epoch, movable=True, angle=90, pen=pg.mkPen(width=3, color='r'))
 
         # brushes for coloring scoring windows
@@ -97,10 +98,10 @@ class Window(QWidget):
         self.wake = pg.mkBrush(pg.intColor(20, alpha=70))
         self.unscored = pg.mkBrush(pg.intColor(50, alpha=50))
 
-        self.rem_center = pg.mkBrush(pg.intColor(90, alpha=50))
-        self.non_rem_center = pg.mkBrush(pg.intColor(15, alpha=50))
-        self.wake_center = pg.mkBrush(pg.intColor(20, alpha=70))
-        self.unscored_center = pg.mkBrush(pg.intColor(50, alpha=50))
+        self.rem_center = pg.mkBrush(pg.intColor(90, alpha=110))
+        self.non_rem_center = pg.mkBrush(pg.intColor(15, alpha=110))
+        self.wake_center = pg.mkBrush(pg.intColor(20, alpha=130))
+        self.unscored_center = pg.mkBrush(pg.intColor(50, alpha=110))
 
         # epoch label
         self.epoch_win = QLabel("Epoch: {} ".format(self.epoch), self)
@@ -112,14 +113,7 @@ class Window(QWidget):
         self.score_win = QLabel('', self)
 
         # axes for raw eeg/emg plots
-        self.raw_y_start = []
-        self.raw_y_end = []
-        self.raw_x = []
-
-        # axes for power spectrum plots
-        self.eeg_power_y = []
-        self.emg_power_y = []
-        self.power_x = []
+        self.x_axis = []
 
         # y axis for eeg barplot
         self.delta_vals = self.metrics[['delta_rel']].values
@@ -139,7 +133,7 @@ class Window(QWidget):
 
         layout.addWidget(tabs)
 
-    def home(self):
+    def home(self) -> QWidget:
 
         # Define home as widget and define layout
         home = QWidget()
@@ -149,7 +143,7 @@ class Window(QWidget):
         middle_layout = QHBoxLayout()
         bottom_layout = QHBoxLayout()
 
-        ## Define buttons and add to top layout
+        # Define buttons and add to top layout
         # load data button
         load_data_btn = QPushButton('Load Data', self)
         load_data_btn.clicked.connect(self.load_data)
@@ -224,7 +218,7 @@ class Window(QWidget):
 
         return home
 
-    def find_epoch(self):
+    def find_epoch(self) -> None:
         num, ok = QInputDialog.getInt(self,
                                       'Find epoch',
                                       'Enter value between 0 and {}'.format(str(len(self.epoch_list) - 1)),
@@ -236,13 +230,14 @@ class Window(QWidget):
             self.epoch = num
             self.update_plots()
 
-    def load_data(self):
+    def load_data(self) -> None:
         file = QFileDialog.getOpenFileName(self, 'Open .wav file', self.current_path, '(*.wav)')
         file_path = file[0]
         self.current_path = os.path.dirname(file_path)
         self.file_win.setText('File: {}'.format(str(os.path.basename(file_path))))
 
         self.samplerate, data = wavfile.read(file_path)
+        self.array_size = self.samplerate * 10
         self.df = pd.DataFrame(data=data, columns=['eeg', 'emg'])
         self.eeg_y = self.df['eeg']
         self.emg_y = self.df['emg']
@@ -253,14 +248,14 @@ class Window(QWidget):
         relative_power = sleep.compute_relative_power(smoothed_eeg)
 
         self.metrics = relative_power[['delta_rel', 'theta_rel', 'theta_over_delta']]
-
         self.epoch_list = relative_power.index
         self.eeg_power = smoothed_eeg
         self.emg_power = smoothed_emg
+        self.delta_vals = self.metrics[['delta_rel']].values
+        self.theta_vals = self.metrics[['theta_rel']].values
         self.update_plots()
-        self.hypnogram_func()
 
-    def load_scores(self):
+    def load_scores(self) -> None:
         file = QFileDialog.getOpenFileName(self, 'Open .txt file', self.current_path, '(*.txt)')
         file_path = file[0]
         self.current_path = os.path.dirname(file_path)
@@ -268,16 +263,16 @@ class Window(QWidget):
 
         score_import = pd.read_csv(file_path)
         if score_import.shape[1] > 2:
-            self.epoch_dict = dict(zip(score_import['Epoch #'].values - 1, map(self.convert_to_numbers, score_import[
-                ' Score'].values)))  # -1 to force epoch start at 0
+            # -1 to force epoch start at 0 when loading scores from Sirenia
+            self.epoch_dict = dict(zip(score_import['Epoch #'].values - 1, score_import[' Score'].values))
         else:
             self.epoch_dict = dict(
-                zip(score_import['epoch'].values, map(self.convert_to_numbers, score_import['score'].values)))
+                zip(score_import['epoch'].values, score_import['score'].values))
 
         self.update_plots()
-        self.hypnogram_func()
+        self.plot_hypnogram()
 
-    def name_file(self):
+    def name_file(self) -> str:
         get_name = QInputDialog()
         name, ok = get_name.getText(self, 'Enter file name', 'Enter file name')
         if ok:
@@ -285,35 +280,33 @@ class Window(QWidget):
         else:
             raise ValueError('Not a valid input')
 
-    def export_scores(self):
+    def export_scores(self) -> None:
         name = str(self.name_file())
         file = QFileDialog.getExistingDirectory(self, 'Select folder', self.current_path)
         file_path = file + '/' + name
 
-        converted_scores = map(self.convert_to_scores, self.epoch_dict.values())
-
-        score_export = pd.DataFrame([self.epoch_dict.keys(), converted_scores]).T
+        score_export = pd.DataFrame([self.epoch_dict.keys(), self.epoch_dict.values()]).T
         score_export.columns = ['epoch', 'score']
         score_export.to_csv(file_path + '.txt', sep=',', index=False)
 
-    def next_rem(self):
+    def next_rem(self) -> None:
         for key in range(self.epoch + 1, self.epoch_list[-1]):
             if key not in self.epoch_dict.keys():
                 pass
             elif self.epoch_dict[key] == 2:
                 self.epoch = key
-                self.hypnogram_func()
+                self.plot_hypnogram()
                 self.update_plots()
                 break
             else:
                 pass
 
-    def clear_scores(self):
+    def clear_scores(self) -> None:
         val = self.warning.exec()
         if val == QMessageBox.Ok:
             self.score_win.setText('Scores: {}'.format('N/A'))
             self.epoch_dict = {}
-            self.hypnogram_func()
+            self.plot_hypnogram()
             self.update_plots()
         else:
             pass
@@ -325,103 +318,93 @@ class Window(QWidget):
             self.error_box.exec_()
             raise KeyError('Not a valid epoch')
 
-    def update_plots(self):
-
-        # Update window number and epoch label
+    def calculate_eeg_axes(self) -> dict:
+        # x axis for eeg/emg plots
         self.window_num = int(self.window_size.currentText())
         self.epoch_win.setText("Epoch: {} ".format(self.epoch))
 
-        # x and y axes for indices for raw eeg/emg plots
-        self.window_start = self.epoch * 10000
-        self.window_end = self.window_start + 10000
-        self.raw_y_start = int(self.window_start - (((self.window_num - 1) / 2) * 10000))
-        self.raw_y_end = int(self.window_end + (((self.window_num - 1) / 2) * 10000))
-        self.raw_x = np.arange(self.raw_y_start, self.raw_y_end)
+        # calculate start and end points for x axis in current window
+        self.window_start = self.epoch * self.array_size
+        self.window_end = self.window_start + self.array_size
 
-        # Force x axes to start at 0
-        if self.raw_y_start < 0:
-            self.raw_y_end -= self.raw_y_start
-            self.raw_y_start = 0
+        # modify x axis according to user-selected window size
+        x_start = int(self.window_start - (((self.window_num - 1) / 2) * self.array_size))
+        x_end = int(self.window_end + (((self.window_num - 1) / 2) * self.array_size))
 
-        # x axis values
-        self.raw_x = np.arange(self.raw_y_start, self.raw_y_end)
+        # limit x axis to begin at 0
+        if x_start < 0:
+            x_end -= x_start
+            x_start = 0
 
-        # convert x-vals to time (seconds) for display
-        x_labels = np.linspace((self.raw_y_start / self.samplerate), (self.raw_y_end / self.samplerate),
+        self.x_axis = np.arange(x_start, x_end)
+
+        # convert x values to time
+        x_labels = np.linspace((x_start / self.samplerate), (x_end / self.samplerate),
                                self.window_num + 1)
-        x_anchors = np.linspace(self.raw_x[0], self.raw_x[-1], self.window_num + 1)
+        x_anchors = np.linspace(x_start, x_end, self.window_num + 1)
         x_labels = dict(zip(x_anchors, x_labels))
 
         # Deal with mismatch in window length and data length at end of dataframe
-        if len(self.raw_x) != len(self.df['eeg'][self.raw_y_start:self.raw_y_end]):
-            self.raw_x = np.arange(self.raw_y_start, len(self.df))
+        if len(self.x_axis) != len(self.df['eeg'][x_start:x_end]):
+            self.x_axis = np.arange(self.x_axis[0], len(self.df))
 
-        # eeg plot
-        self.eeg_plot.plot(x=self.raw_x, y=self.df['eeg'][self.raw_y_start:self.raw_y_end], pen='k', clear=True)
-        self.eeg_plot.addItem(self.line1)
-        self.eeg_plot.addItem(self.line2)
-        ax1 = self.eeg_plot.getAxis('bottom')
-        ax1.setTicks([x_labels.items()])
+        return x_labels
 
-        # emg plot
-        self.emg_plot.plot(x=self.raw_x, y=self.df['emg'][self.raw_y_start:self.raw_y_end], pen='k', clear=True)
-        ax2 = self.emg_plot.getAxis('bottom')
-        ax2.setTicks([x_labels.items()])
+    def plot_shading(self, i: int) -> None:
+        begin = self.x_axis[0] + i * self.array_size
+        end = begin + self.array_size
 
-        # shading for eeg and emg windows
-        for i in range(self.window_num):
-            begin = self.raw_y_start + i * 10000
-            end = begin + 10000
-            self.eeg_plot.addItem(pg.LinearRegionItem([begin, end], movable=False,
-                                                      brush=self.color_scheme(begin / 10000)))
-            self.eeg_plot.addItem(pg.LinearRegionItem([self.window_start, self.window_end], movable=False,
-                                                      brush=self.color_scheme(self.epoch, center=True)))
+        self.eeg_plot.addItem(pg.LinearRegionItem([begin, end], movable=False,
+                                                  brush=self.color_scheme(begin / self.array_size)))
+        self.emg_plot.addItem(pg.LinearRegionItem([begin, end], movable=False,
+                                                  brush=self.color_scheme(begin / self.array_size)))
 
-            self.emg_plot.addItem(pg.LinearRegionItem([begin, end], movable=False,
-                                                      brush=self.color_scheme(begin / 10000)))
-            self.emg_plot.addItem(pg.LinearRegionItem([self.window_start, self.window_end], movable=False,
-                                                      brush=self.color_scheme(self.epoch, center=True)))
-
-        # power spectrum plots
-        self.power_x = np.arange(0, (len(self.eeg_power[self.epoch]) * 0.1), 0.1)
-        self.eeg_power_plot.plot(x=self.power_x, y=self.eeg_power[self.epoch], pen=pg.mkPen('k', width=2), clear=True)
-
-        # relative power bar plot get_values
-        self.delta_vals = self.metrics[['delta_rel']].values
-        self.theta_vals = self.metrics[['theta_rel']].values
-
-        # relative power bar plot remove old values
+    def plot_relative_power(self) -> None:
         self.eeg_bar_plot.removeItem(self.rel_delta)
         self.eeg_bar_plot.removeItem(self.rel_theta)
 
-        # relative power bar plot, add new values and re-graph
         self.rel_delta = pg.BarGraphItem(x=[0], height=self.delta_vals[self.epoch], width=0.8,
                                          brush=self.non_rem_center)
-
         self.rel_theta = pg.BarGraphItem(x=[1], height=self.theta_vals[self.epoch], width=0.8,
                                          brush=self.rem_center)
 
         self.eeg_bar_plot.addItem(self.rel_delta)
         self.eeg_bar_plot.addItem(self.rel_theta)
 
+    def update_plots(self) -> None:
+        x_labels = self.calculate_eeg_axes()
+
+        # eeg plot
+        self.eeg_plot.plot(x=self.x_axis, y=self.df['eeg'][self.x_axis[0]:self.x_axis[-1] + 1], pen='k', clear=True)
+        self.eeg_plot.addItem(self.line1)
+        self.eeg_plot.addItem(self.line2)
+        ax1 = self.eeg_plot.getAxis('bottom')
+        ax1.setTicks([x_labels.items()])
+
+        # emg plot
+        self.emg_plot.plot(x=self.x_axis, y=self.df['emg'][self.x_axis[0]:self.x_axis[-1] + 1], pen='k', clear=True)
+        ax2 = self.emg_plot.getAxis('bottom')
+        ax2.setTicks([x_labels.items()])
+
+        # shading for eeg and emg windows
+        [self.plot_shading(i) for i in range(self.window_num)]
+        self.eeg_plot.addItem(pg.LinearRegionItem([self.window_start, self.window_end], movable=False,
+                                                  brush=self.color_scheme(self.epoch, center=True)))
+        self.emg_plot.addItem(pg.LinearRegionItem([self.window_start, self.window_end], movable=False,
+                                                  brush=self.color_scheme(self.epoch, center=True)))
+
+        # power spectrum plots
+        power_x_axis = np.arange(0, (len(self.eeg_power[self.epoch]) * 0.1), 0.1)
+        self.eeg_power_plot.plot(x=power_x_axis, y=self.eeg_power[self.epoch], pen=pg.mkPen('k', width=2), clear=True)
+
+        # relative power bar plot remove old values
+        self.plot_relative_power()
+
         # reset hypnogram
         self.hypnogram.removeItem(self.hypno_line)
         self.hypno_line = pg.InfiniteLine(pos=self.epoch, movable=True, angle=90, pen=pg.mkPen(width=3, color='r'))
         self.hypno_line.sigPositionChangeFinished.connect(self.hypno_go)
         self.hypnogram.addItem(self.hypno_line)
-
-    @staticmethod
-    def convert_to_scores(x: int) -> str:
-        if x == 0:
-            return 'Wake'
-        if x == 1:
-            return 'Non REM'
-        if x == 2:
-            return 'REM'
-        if x == 3:
-            return 'Unscored'
-        else:
-            return np.NaN
 
     @staticmethod
     def convert_to_numbers(x: str) -> int:
@@ -434,32 +417,32 @@ class Window(QWidget):
         if x == 'Unscored':
             return 3
         else:
-            return None
+            return np.NaN
 
-    def hypnogram_func(self):
-        return self.hypnogram.plot(x=list(self.epoch_dict.keys()), y=list(self.epoch_dict.values()),
+    def plot_hypnogram(self) -> pg.plot:
+        hypno_list = [self.convert_to_numbers(x) for x in self.epoch_dict.values()]
+        return self.hypnogram.plot(x=list(self.epoch_dict.keys()), y=hypno_list,
                                    pen=pg.mkPen('k', width=2), clear=True)
 
-    def hypno_go(self):
-        current_epoch = self.hypno_line.value()
-        self.epoch = round(current_epoch)
-        return self.update_plots()
+    def hypno_go(self) -> None:
+        self.epoch = round(self.hypno_line.value())
+        self.update_plots()
 
-    def color_scheme(self, epoch: int, center: bool = False):
+    def color_scheme(self, epoch: int, center: bool = False) -> pg.mkBrush:
         try:
-            if self.epoch_dict[epoch] == 2 and not center:
+            if self.epoch_dict[epoch] == 'REM' and not center:
                 return self.rem
-            elif self.epoch_dict[epoch] == 2 and center:
+            elif self.epoch_dict[epoch] == 'REM' and center:
                 return self.rem_center
-            elif self.epoch_dict[epoch] == 1 and not center:
+            elif self.epoch_dict[epoch] == 'Non REM' and not center:
                 return self.non_rem
-            elif self.epoch_dict[epoch] == 1 and center:
+            elif self.epoch_dict[epoch] == 'Non REM' and center:
                 return self.non_rem_center
-            elif self.epoch_dict[epoch] == 0 and not center:
+            elif self.epoch_dict[epoch] == 'Wake' and not center:
                 return self.wake
-            elif self.epoch_dict[epoch] == 0 and center:
+            elif self.epoch_dict[epoch] == 'Wake' and center:
                 return self.wake_center
-            elif self.epoch_dict[epoch] == 3 and center:
+            elif self.epoch_dict[epoch] == 'Unscored' and center:
                 return self.unscored_center
             elif self.epoch_dict[epoch] == [] and center:
                 return self.unscored_center
@@ -471,37 +454,37 @@ class Window(QWidget):
         except KeyError:
             return self.unscored
 
-    def keyPressEvent(self, event: int):
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() == 87:
-            self.epoch_dict[self.epoch] = 0
+            self.epoch_dict[self.epoch] = 'Wake'
             # 'Wake'
             self.check_epoch(1)
             self.epoch += 1
-            self.hypnogram_func()
+            self.plot_hypnogram()
             self.update_plots()
 
         if event.key() == 69:
-            self.epoch_dict[self.epoch] = 1
+            self.epoch_dict[self.epoch] = 'Non REM'
             # 'Non REM'
             self.check_epoch(1)
             self.epoch += 1
-            self.hypnogram_func()
+            self.plot_hypnogram()
             self.update_plots()
 
         if event.key() == 82:
-            self.epoch_dict[self.epoch] = 2
+            self.epoch_dict[self.epoch] = 'REM'
             # 'REM'
             self.check_epoch(1)
             self.epoch += 1
-            self.hypnogram_func()
+            self.plot_hypnogram()
             self.update_plots()
 
         if event.key() == 84:
-            self.epoch_dict[self.epoch] = 3
+            self.epoch_dict[self.epoch] = 'Unscored'
             # 'Unscored'
             self.check_epoch(1)
             self.epoch += 1
-            self.hypnogram_func()
+            self.plot_hypnogram()
             self.update_plots()
 
         if event.key() == 16777234:
@@ -516,7 +499,7 @@ class Window(QWidget):
             self.epoch += 1
             self.update_plots()
 
-    def model_tab(self):
+    def model_tab(self) -> QWidget:
         model_tab = QWidget()
 
         layout = QGridLayout()
@@ -536,7 +519,7 @@ class Window(QWidget):
 
         return model_tab
 
-    def load_model(self):
+    def load_model(self) -> None:
         file = QFileDialog.getOpenFileName(self, 'Open .wav file', self.current_path, '(*.joblib *.pkl)')
         file_path = file[0]
         self.current_path = os.path.dirname(file_path)
@@ -545,15 +528,14 @@ class Window(QWidget):
         self.model_display.setText('Current_Model: {}'.format(str(os.path.basename(file_path))))
         self.scoring_complete.setText('')
 
-    def score_data(self):
+    def score_data(self) -> None:
 
         try:
             self.scores = self.model.predict(self.metrics.values)
-            self.scores = map(self.convert_to_numbers, self.scores)
 
             self.epoch_dict = dict(zip(self.epoch_list, self.scores))
             self.update_plots()
-            self.hypnogram_func()
+            self.plot_hypnogram()
             self.scoring_complete.setText('Scoring Complete!')
 
         except ValueError:
