@@ -23,8 +23,8 @@ from scipy.io import wavfile
 import pandas as pd
 import numpy as np
 import sleep_functions as sleep
-from joblib import load
 import os
+from pycaret.classification import *
 
 pg.setConfigOption('background', "w")
 pg.setConfigOption('foreground', "k")
@@ -231,46 +231,48 @@ class Window(QWidget):
             self.update_plots()
 
     def load_data(self) -> None:
-        file = QFileDialog.getOpenFileName(self, 'Open .wav file', self.current_path, '(*.wav)')
-        file_path = file[0]
-        self.current_path = os.path.dirname(file_path)
-        self.file_win.setText('File: {}'.format(str(os.path.basename(file_path))))
+        path, ext = QFileDialog.getOpenFileName(self, 'Open .wav file', self.current_path, '(*.wav)')
 
-        self.samplerate, data = wavfile.read(file_path)
-        self.array_size = self.samplerate * 10
-        self.df = pd.DataFrame(data=data, columns=['eeg', 'emg'])
-        self.eeg_y = self.df['eeg']
-        self.emg_y = self.df['emg']
+        if path:
+            self.current_path = os.path.dirname(path)
+            self.file_win.setText('File: {}'.format(str(os.path.basename(path))))
 
-        # Compute power spectrum, relative power metrics
-        eeg_power, emg_power = sleep.compute_power(self.df, samplerate=self.samplerate)
-        smoothed_eeg, smoothed_emg = sleep.smooth_signal(eeg_power, emg_power)
-        relative_power = sleep.compute_relative_power(smoothed_eeg)
+            self.samplerate, data = wavfile.read(path)
+            self.array_size = self.samplerate * 10
+            self.df = pd.DataFrame(data=data, columns=['eeg', 'emg'])
+            self.eeg_y = self.df['eeg']
+            self.emg_y = self.df['emg']
 
-        self.metrics = relative_power[['delta_rel', 'theta_rel', 'theta_over_delta']]
-        self.epoch_list = relative_power.index
-        self.eeg_power = smoothed_eeg
-        self.emg_power = smoothed_emg
-        self.delta_vals = self.metrics[['delta_rel']].values
-        self.theta_vals = self.metrics[['theta_rel']].values
-        self.update_plots()
+            # Compute power spectrum, relative power metrics
+            eeg_power, emg_power = sleep.compute_power(self.df, samplerate=self.samplerate)
+            smoothed_eeg, smoothed_emg = sleep.smooth_signal(eeg_power, emg_power)
+            relative_power = sleep.compute_relative_power(smoothed_eeg)
+
+            self.metrics = relative_power[['delta_rel', 'theta_rel', 'theta_over_delta']]
+            self.epoch_list = relative_power.index
+            self.eeg_power = smoothed_eeg
+            self.emg_power = smoothed_emg
+            self.delta_vals = self.metrics[['delta_rel']].values
+            self.theta_vals = self.metrics[['theta_rel']].values
+            self.update_plots()
 
     def load_scores(self) -> None:
-        file = QFileDialog.getOpenFileName(self, 'Open .txt file', self.current_path, '(*.txt)')
-        file_path = file[0]
-        self.current_path = os.path.dirname(file_path)
-        self.score_win.setText('Scores: {}'.format(str(os.path.basename(file_path))))
+        path, ext = QFileDialog.getOpenFileName(self, 'Open .txt file', self.current_path, '(*.txt)')
 
-        score_import = pd.read_csv(file_path)
-        if score_import.shape[1] > 2:
-            # -1 to force epoch start at 0 when loading scores from Sirenia
-            self.epoch_dict = dict(zip(score_import['Epoch #'].values - 1, score_import[' Score'].values))
-        else:
-            self.epoch_dict = dict(
-                zip(score_import['epoch'].values, score_import['score'].values))
+        if path:
+            self.current_path = os.path.dirname(path)
+            self.score_win.setText('Scores: {}'.format(str(os.path.basename(path))))
 
-        self.update_plots()
-        self.plot_hypnogram()
+            score_import = pd.read_csv(path)
+            if score_import.shape[1] > 2:
+                # -1 to force epoch start at 0 when loading scores from Sirenia
+                self.epoch_dict = dict(zip(score_import['Epoch #'].values - 1, score_import[' Score'].values))
+            else:
+                self.epoch_dict = dict(
+                    zip(score_import['epoch'].values, score_import['score'].values))
+
+            self.update_plots()
+            self.plot_hypnogram()
 
     def name_file(self) -> str:
         get_name = QInputDialog()
@@ -520,27 +522,40 @@ class Window(QWidget):
         return model_tab
 
     def load_model(self) -> None:
+        """
+        TODO: pickle current model and use that - the .joblib here is old news
+        :return: None
+        """
         file = QFileDialog.getOpenFileName(self, 'Open .wav file', self.current_path, '(*.joblib *.pkl)')
         file_path = file[0]
         self.current_path = os.path.dirname(file_path)
+        file = os.path.splitext(file_path)[0]
 
-        self.model = load(os.path.realpath(file_path))
+        self.model = load_model(file)
         self.model_display.setText('Current_Model: {}'.format(str(os.path.basename(file_path))))
         self.scoring_complete.setText('')
 
     def score_data(self) -> None:
 
-        try:
-            self.scores = self.model.predict(self.metrics.values)
+        num, ok = QInputDialog.getInt(self,
+                                      'Enter Epoch Number',
+                                      'Select representative REM epoch',
+                                      min=0,
+                                      max=len(self.epoch_list) - 1)
 
-            self.epoch_dict = dict(zip(self.epoch_list, self.scores))
-            self.update_plots()
-            self.plot_hypnogram()
-            self.scoring_complete.setText('Scoring Complete!')
+        if ok:
+            self.epoch = num
 
-        except ValueError:
-            self.error_box.setText('Must load data first!')
-            self.error_box.exec_()
+        self.metrics = sleep.generate_features(self.df, self.epoch)
+        features = self.metrics[['EEG_std', 'EEG_amp', 'EMG_std', 'delta_rel', 'theta_rel', 'theta_over_delta']]
+
+        predictions = predict_model(self.model, features)
+        self.scores = sleep.modify_scores(predictions['Label'].values)
+
+        self.epoch_dict = dict(zip(self.epoch_list, self.scores))
+        self.update_plots()
+        self.plot_hypnogram()
+        self.scoring_complete.setText('Scoring Complete!')
 
 
 def run():

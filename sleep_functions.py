@@ -256,13 +256,12 @@ def compute_signal_features(data: pd.DataFrame, window: int = 10, samplerate: in
     return output
 
 
-def generate_features(data: pd.DataFrame, scores: pd.DataFrame, start_epoch: int = 9) -> pd.DataFrame:
+def generate_features(data: pd.DataFrame, start_epoch: int = 9) -> pd.DataFrame:
     """
     Run all functions to compute power spectrum and feature for ML in one dataframe
 
     INPUTS:
     data = dataframe with 'eeg' and 'emg' as columns
-    scores = dataframe containing scores ['Wake', 'Non REM', 'REM', 'Unscored']
     start_epoch = epoch in data to use for normalization of other epochs
     __________________________________________________________________________________________________
 
@@ -281,12 +280,6 @@ def generate_features(data: pd.DataFrame, scores: pd.DataFrame, start_epoch: int
 
     # get rid of Key_0 column from merge
     metrics = metrics.iloc[:, 1:]
-
-    try:
-        scores.rename(columns={' Score': 'Score'}, inplace=True)
-        metrics['score'] = scores['Score']
-    except KeyError:
-        metrics['score'] = scores['score']
 
     return metrics
 
