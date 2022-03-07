@@ -522,10 +522,7 @@ class Window(QWidget):
         return model_tab
 
     def load_model(self) -> None:
-        """
-        TODO: pickle current model and use that - the .joblib here is old news
-        :return: None
-        """
+
         file = QFileDialog.getOpenFileName(self, 'Open .wav file', self.current_path, '(*.joblib *.pkl)')
         file_path = file[0]
         self.current_path = os.path.dirname(file_path)
@@ -539,9 +536,10 @@ class Window(QWidget):
 
         num, ok = QInputDialog.getInt(self,
                                       'Enter Epoch Number',
-                                      'Select representative REM epoch',
+                                      'Select representative epoch',
                                       min=0,
-                                      max=len(self.epoch_list) - 1)
+                                      max=len(self.epoch_list) - 1,
+                                      value=2)
 
         if ok:
             self.epoch = num
