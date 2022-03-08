@@ -13,7 +13,7 @@ Run `python -m pip install -r requirements.txt`
 5. Press W,E,R,T to change the scores manually and save scores to a .txt file by clicking `Export Scores`
 6. Now let's use machine learning to automatically score the data - clear the current scores by clicking `Clear Scores`
 7. In the model tab, click `Load Model` and select the .pkl file in sample data folder, then click `Score Data`
-8. A window will pop up, pre-populated with the number `2` -> click `Enter`, in a few moments, the model will complete scoring
+8. A window will pop up, pre-populated with the number `2`, click `Enter` and wait a few moments
 9. Go back to the home tab to see how well the model worked!
 
 ## *In this repo...*
