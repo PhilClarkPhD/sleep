@@ -66,6 +66,10 @@ class Window(QWidget):
         self.eeg_y = []
         self.emg_y = []
 
+        self.wake_count = 0
+        self.nrem_count = 0
+        self.rem_count = 0
+
         # create plot objects in window
         self.window_size = QComboBox(self)
         self.eeg_plot = pg.PlotWidget(self, title='EEG')
@@ -156,6 +160,11 @@ class Window(QWidget):
         export_scores_btn = QPushButton('Export Scores', self)
         export_scores_btn.clicked.connect(self.export_scores)
         button_layout.addWidget(export_scores_btn, 0, 4)
+
+        # export score breakdown as .csv
+        export_breakdown_btn = QPushButton('Export Breakdown', self)
+        export_breakdown_btn.clicked.connect(self.export_breakdown)
+        button_layout.addWidget(export_breakdown_btn, 1,4)
 
         # move window to epoch of your choosing
         find_epoch_btn = QPushButton('Find epoch', self)
@@ -284,6 +293,41 @@ class Window(QWidget):
         score_export = pd.DataFrame([self.epoch_dict.keys(), self.epoch_dict.values()]).T
         score_export.columns = ['epoch', 'score']
         score_export.to_csv(file_path + '.txt', sep=',', index=False)
+
+    def breakdown_scores(self, epoch:str) -> None:
+        if epoch == 'Wake':
+            self.wake_count += 1
+        elif epoch == 'Non REM':
+            self.nrem_count += 1
+        elif epoch == 'REM':
+            self.rem_count += 1
+        else:
+            next
+
+    def breakdown_df(self) -> pd.DataFrame:
+        [self.breakdown_scores(i) for i in self.epoch_dict.values()]
+
+        total = self.wake_count + self.nrem_count + self.rem_count
+        rem_proportion = round(self.rem_count / total, 2)
+        nrem_proportion = round(self.nrem_count / total, 2)
+        wake_proportion = round(self.wake_count / total, 2)
+
+        labels = ['Wake','Non REM','REM']
+        proportions = [wake_proportion, nrem_proportion, rem_proportion]
+        totals = [self.wake_count, self.nrem_count, self.rem_count]
+
+        output = pd.DataFrame([labels,totals,proportions]).T
+        output.columns = ['Stage','Epochs','Proportion']
+
+        return output
+
+    def export_breakdown(self):
+        name = str(self.name_file())
+        file = QFileDialog.getExistingDirectory(self, 'Select folder', self.current_path)
+        file_path = file + '/' + name
+
+        breakdown = self.breakdown_df()
+        breakdown.to_csv(file_path + '.csv', sep=',', index=False)
 
     def next_rem(self) -> None:
         for key in range(self.epoch + 1, self.epoch_list[-1]):
