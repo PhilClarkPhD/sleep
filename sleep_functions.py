@@ -95,6 +95,7 @@ def smooth_signal(eeg_power: dict[int, float], emg_power: dict[int, float], wind
             raise (ValueError, "smooth only accepts 1 dimension arrays.")
 
         if x_eeg.size < window_len:
+            break
             raise (ValueError, "Input vector needs to be bigger than window size.")
 
         if window_len < 3:
@@ -230,7 +231,7 @@ def compute_signal_features(data: pd.DataFrame, window: int = 10, samplerate: in
         EMG_ss[epoch] = np.sum(np.square(EMG)) / base_ss_EMG
         EMG_std[epoch] = np.std(EMG) / base_std_EMG
 
-        # Calculate EMG events above event_treshold
+        # Calculate EMG events above event_threshold
         event_array = EMG.loc[EMG > event_threshold]
 
         if not len(event_array) == 0:
