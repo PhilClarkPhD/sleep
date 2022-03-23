@@ -1,16 +1,11 @@
 """
 TODO:
-1. refactor similar to fp_gui
-    a. make sure computed metrics match those of model
-    b. add in necessary metrics in the model tab
-3. make 'NEXT' button selectable ['NREM','WAKE','REM','Unscored']
-5. Modeling
-    a. allow file browsing to select model (.joblib file)
-    b. display key metrics of model performance on test set (accuracy, conf matrix, f1, jaccard, etc.)
-    c. Allow training and saving of new model from current data/score set
-    d. Allow training/selection of best model?
-    e. Set up system for comparing two set of scores)
-
+1. make 'NEXT' button selectable ['NREM','WAKE','REM','Unscored']
+2. Modeling
+    a. display key metrics of model performance on test set (accuracy, conf matrix, f1, jaccard, etc.)
+    b. Allow training and saving of new model from current data/score set
+    c. Allow training/selection of best model?
+    d. Set up system for comparing two set of scores)
 """
 
 import pyqtgraph as pg
@@ -20,8 +15,6 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, \
 from PyQt5.QtGui import QKeyEvent
 import sys
 from scipy.io import wavfile
-import pandas as pd
-import numpy as np
 import sleep_functions as sleep
 import os
 from pycaret.classification import *
@@ -174,7 +167,8 @@ class Window(QWidget):
         self.window_size.currentTextChanged.connect(self.update_plots)
         button_layout.addWidget(self.window_size, 0, 2)
 
-        next_REM_btn = QPushButton('Next: {}'.format(''), self)
+        #next REM button
+        next_REM_btn = QPushButton('Next: {}'.format("REM"), self)
         next_REM_btn.clicked.connect(self.next_rem)
         button_layout.addWidget(next_REM_btn, 0, 3)
 
@@ -295,7 +289,7 @@ class Window(QWidget):
         for key in range(self.epoch + 1, self.epoch_list[-1]):
             if key not in self.epoch_dict.keys():
                 pass
-            elif self.epoch_dict[key] == 2:
+            elif self.epoch_dict[key] == "REM":
                 self.epoch = key
                 self.plot_hypnogram()
                 self.update_plots()
