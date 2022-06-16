@@ -142,31 +142,41 @@ def compute_relative_power(smoothed_eeg: dict[int, float], freq_res: float = 0.1
         theta_over_delta = ratio of theta power to delta power for epoch x
     """
     rel_power = {}
+    theta_length = ((theta_upper - theta_lower) / freq_res) + 1 # float equal to length of theta power spectrum array
+    delta_length = ((delta_upper - delta_lower) / freq_res) + 1 # float equal to length of delta power spectrum array
 
     for epoch in smoothed_eeg:
         x = smoothed_eeg[epoch]
+
         rel_power_list = []
 
         power_axis = np.arange(len(x)) * freq_res
         idx_delta = np.logical_and(power_axis >= delta_lower, power_axis <= delta_upper)
         idx_theta = np.logical_and(power_axis >= theta_lower, power_axis <= theta_upper)
 
-        # compute total power
-        total_power = simps(x, dx=freq_res)
 
-        # compute delta power
-        delta_power = (simps(x[idx_delta], dx=freq_res)) / total_power
-        rel_power_list.append(delta_power)
+        if (len((np.where(idx_theta))[0])) >= theta_length and (len((np.where(idx_delta))[0])) >= delta_length:
+            #Checks if length of delta and theta spectra are sufficient for computing relative power
 
-        # compute theta power
-        theta_power = (simps(x[idx_theta], dx=freq_res)) / total_power
-        rel_power_list.append(theta_power)
+            # compute total power
+            total_power = simps(x, dx=freq_res)
 
-        # compute proportion of theta to delta
-        theta_over_delta = theta_power / delta_power
-        rel_power_list.append(theta_over_delta)
+            # compute delta power
+            delta_power = (simps(x[idx_delta], dx=freq_res)) / total_power
+            rel_power_list.append(delta_power)
 
-        rel_power[epoch] = rel_power_list
+            # compute theta power
+            theta_power = (simps(x[idx_theta], dx=freq_res)) / total_power
+            rel_power_list.append(theta_power)
+
+            # compute proportion of theta to delta
+            theta_over_delta = theta_power / delta_power
+            rel_power_list.append(theta_over_delta)
+
+            rel_power[epoch] = rel_power_list
+
+        else:
+            rel_power[epoch] = [0,0,0]
 
     rel_power = pd.DataFrame.from_dict(rel_power).T
     rel_power.columns = ['delta_rel', 'theta_rel', 'theta_over_delta']
@@ -231,7 +241,7 @@ def compute_signal_features(data: pd.DataFrame, window: int = 10, samplerate: in
         EMG_ss[epoch] = np.sum(np.square(EMG)) / base_ss_EMG
         EMG_std[epoch] = np.std(EMG) / base_std_EMG
 
-        # Calculate EMG events above event_threshold
+        # Calculate EMG events above event_treshold
         event_array = EMG.loc[EMG > event_threshold]
 
         if not len(event_array) == 0:
@@ -277,10 +287,8 @@ def generate_features(data: pd.DataFrame, start_epoch: int = 9) -> pd.DataFrame:
     signal_features = compute_signal_features(data, start_epoch=start_epoch)
     rel_power = compute_relative_power(smoothed_eeg)
 
-    metrics = signal_features.merge(rel_power, left_on=signal_features.index, right_on=rel_power.index, how='outer')
-
-    # get rid of Key_0 column from merge
-    metrics = metrics.iloc[:, 1:]
+    metrics = signal_features.join(rel_power)
+    print(metrics.head(), metrics.shape)
 
     return metrics
 
