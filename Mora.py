@@ -7,7 +7,8 @@ TODO:
     c. Allow training/selection of best model?
     d. Set up system for comparing two set of scores)
 """
-
+import numpy as np
+import pandas as pd
 import pyqtgraph as pg
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, \
     QFileDialog, QLabel, QInputDialog, QMessageBox, QTabWidget, QVBoxLayout, \
@@ -15,7 +16,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, \
 from PyQt5.QtGui import QKeyEvent
 import sys
 from scipy.io import wavfile
-import sleep_functions as sleep
+import data_processing.sleep_functions as sleep
 import os
 from pycaret.classification import *
 
