@@ -6,3 +6,6 @@
 logs*
 __*
 .DS*
+
+# data
+sleep_data/
