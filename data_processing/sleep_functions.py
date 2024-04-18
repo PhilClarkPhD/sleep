@@ -198,7 +198,7 @@ def compute_signal_features(data: pd.DataFrame, window: int = 10, samplerate: in
     output = a pd.DataFrame where rows are epochs and columns are as follows:
         EEG_std = dictionary,keys are epochs and values are relative SD of this epoch versus base_EEG
         EEG_ss = dictionary, keys are epochs and values are sum of squared for this epoch compared to base_EEG
-        EEG_ amp = dictionary, keys are epochs and values are relative amplitidue of this epoch compare to base_EEG
+        EEG_amp = dictionary, keys are epochs and values are relative amplitidue of this epoch compare to base_EEG
         EMG_std = dictionary, keys are epochs and values are relative SD of this epoch versus base_EMG
         EEG_ss = dictionary, keys are epochs and values are sum of squared for this epoch compared to base_EMG
         EMG_events = dictionary, keys are epochs and values are number of EMG events within that epoch
@@ -288,7 +288,6 @@ def generate_features(data: pd.DataFrame, start_epoch: int = 9) -> pd.DataFrame:
     rel_power = compute_relative_power(smoothed_eeg)
 
     metrics = signal_features.join(rel_power)
-    print(metrics.head(), metrics.shape)
 
     return metrics
 

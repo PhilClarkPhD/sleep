@@ -1,12 +1,8 @@
 """
 TODO:
-1. make 'NEXT' button selectable ['NREM','WAKE','REM','Unscored']
-2. Modeling
-    a. display key metrics of model performance on test set (accuracy, conf matrix, f1, jaccard, etc.)
-    b. Allow training and saving of new model from current data/score set
-    c. Allow training/selection of best model?
-    d. Set up system for comparing two set of scores)
+Consider moving model code to new window pop up
 """
+
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
@@ -64,8 +60,7 @@ class Window(QWidget):
         self.epoch_list = []
         self.eeg_power = {}
         self.emg_power = {}
-        self.eeg_y = []
-        self.emg_y = []
+
 
         self.wake_count = 0
         self.nrem_count = 0
@@ -244,8 +239,7 @@ class Window(QWidget):
             self.samplerate, data = wavfile.read(path)
             self.array_size = self.samplerate * 10
             self.df = pd.DataFrame(data=data, columns=['eeg', 'emg'])
-            self.eeg_y = self.df['eeg']
-            self.emg_y = self.df['emg']
+
 
             # Compute power spectrum, relative power metrics
             eeg_power, emg_power = sleep.compute_power(self.df, samplerate=self.samplerate)
@@ -268,12 +262,13 @@ class Window(QWidget):
             self.score_win.setText('Scores: {}'.format(str(os.path.basename(path))))
 
             score_import = pd.read_csv(path)
+            score_import.rename(columns=lambda x: x.strip(), inplace=True) #remove whitespace
+
             if score_import.shape[1] > 2:
-                # -1 to force epoch start at 0 when loading scores from Sirenia
-                self.epoch_dict = dict(zip(score_import['Epoch #'].values - 1, score_import[' Score'].values))
+                # subtract 1 to force epoch start at 0 when loading scores from Sirenia
+                self.epoch_dict = dict(zip(score_import['Epoch #'].values - 1, score_import['Score'].values))
             else:
-                self.epoch_dict = dict(
-                    zip(score_import['epoch'].values, score_import['score'].values))
+                self.epoch_dict = dict(zip(score_import['epoch'].values, score_import['score'].values))
 
             self.update_plots()
             self.plot_hypnogram()
@@ -460,9 +455,11 @@ class Window(QWidget):
         else:
             return np.NaN
 
-    def plot_hypnogram(self) -> pg.plot:
+    def plot_hypnogram(self) -> pg.plot: #TODO: This plot does not render for 171N_bl
         hypno_list = [self.convert_to_numbers(x) for x in self.epoch_dict.values()]
-        return self.hypnogram.plot(x=list(self.epoch_dict.keys()), y=hypno_list,
+        epoch_list = list(self.epoch_dict.keys())
+
+        return self.hypnogram.plot(x=epoch_list, y=hypno_list,
                                    pen=pg.mkPen('k', width=2), clear=True)
 
     def hypno_go(self) -> None:

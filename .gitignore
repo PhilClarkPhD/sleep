@@ -6,6 +6,7 @@
 logs*
 __*
 .DS*
+.idea/
 
 # data
 sleep_data/
