@@ -45,6 +45,7 @@ def get_file_paths(base_path: str) -> defaultdict:
     AD1...) and the final level is file type (.wav or .txt)
     -       Example dict: {'171N': {'BL':{'.wav': WAV_PATH, '.txt.': TXT_PATH}, 'AD1': ...}}
     """
+
     path_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(str)))
 
     # create list to save file paths
@@ -52,8 +53,6 @@ def get_file_paths(base_path: str) -> defaultdict:
     txt_file_paths = []
 
     for root, dirs, files in os.walk(base_path):
-        print(root)
-        print(dirs)
 
         # separate .wav and .txt files
         for file in files:
@@ -158,7 +157,6 @@ def make_feature_df(base_path: str) -> pd.DataFrame:
     """
 
     file_paths = get_file_paths(base_path)
-    print(file_paths.keys())
     df = calculate_features(file_paths)
 
     return df
