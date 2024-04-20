@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
 import numpy as np
 from scipy.fft import rfft, rfftfreq
 import scipy.spatial.transform._rotation_groups  # keep this for compiling
