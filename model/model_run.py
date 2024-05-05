@@ -1,6 +1,6 @@
-#Two issues fix in future QA/feature engineering workflow:
-## epochs did not all start at 0 (some started at 1)
-## 'Non' and 'Unscored' still present in the 'score' columns for some rats - remove
+# Two issues fix in future QA/feature engineering workflow:
+# Epochs did not all start at 0 (some started at 1)
+# 'Non' and 'Unscored' still present in the 'score' columns for some rats - remove
 
 import datetime
 import process_training_data as process_data
@@ -9,7 +9,7 @@ import train_model
 from sklearn.metrics import f1_score
 
 # Set feature path
-feature_path = ('/Users/phil/philclarkphd/sleep/sleep_data/df_features_041924.csv')
+feature_path = '/Users/phil/philclarkphd/sleep/sleep_data/df_features_041924.csv'
 
 # Load Data
 df = process_data.load_data(feature_path)
@@ -34,7 +34,6 @@ X_train, y_train, X_test, y_test = process_data.train_test_split(df=df, feature_
                                                                  time_series_idx=time_series_idx, group_col=group_col,
                                                                  target_col=target_col)
 
-
 # Find best model params with RandomSearchCV
 search_space = {
     'n_estimators': [100, 200, 300],
@@ -49,20 +48,19 @@ search_space = {
 random_state = 42
 cv_folds = 5
 n_iter = 10
-eval_metric = "f1_weighted" #Use this on imbalanced multiclass data
+eval_metric = "f1_weighted"  # Use this on imbalanced multiclass data
 best_params, search_duration = train_model.find_best_params(X_train=X_train, y_train=y_train,
                                                             search_space=search_space, random_state=random_state,
                                                             cv_folds=cv_folds, n_iter=n_iter, eval_metric=eval_metric)
 
-#Train model on test data w/ best params
+# Train model on test data w/ best params
 model_0, y_test_pred, *_ = train_model.train_model(X_test, y_test, best_params)
 
 # Evaluate Model
 train_feature_importance = model_0.feature_importances_
 train_score = f1_score(y_test, y_test_pred, average="weighted")
 
-
-#Train final model
+# Train final model
 X = df[feature_cols]
 y = df[target_col]
 model_version = "1.0"
@@ -71,12 +69,11 @@ model_name = f"XGBoost_{model_version}"
 final_model, y_pred, time_to_fit, label_encoding = train_model.train_model(X, y, best_params)
 
 model_score = f1_score(y, y_pred, average="weighted")
-current_time = datetime.datetime.now()
+current_time = datetime.datetime.today()
 
-
-## Make any notes
+# Make any notes
 notes = '''
-Initial model version. Kept in most/all features to maximize predictive accuracy, irrespective of feature 
+Initial model version. Kept in most/all features to maximize predictive accuracy, irrespective of feature
 importance.Did not compare different model architectures.
 '''
 
@@ -84,7 +81,7 @@ importance.Did not compare different model architectures.
 n_train_rows = X_train.shape[0]
 n_test_rows = X_test.shape[0]
 
-metadata ={
+metadata = {
     'model_name': model_name,
     'model_version': model_version,
     'current_path': current_time,
@@ -111,12 +108,7 @@ metadata ={
     'notes': notes
 }
 
-print(metadata)
-
-## Save model and metadata
+# Save model and metadata
 SAVE_DIR = '/Users/phil/philclarkphd/sleep/model_artefacts'
 save_model.save_model_and_params(save_dir=SAVE_DIR, model=final_model, params=best_params, file_name=f"{model_name}")
 save_model.save_encoder(save_dir=SAVE_DIR, label_encoder=label_encoding, file_name=f"{model_name}")
-
-
-
