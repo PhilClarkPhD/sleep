@@ -1,3 +1,5 @@
+# TODO:
+# Find better way to save the X_test and y_test_pred values for model evaluation
 # Two issues fix in future QA/feature engineering workflow:
 # Epochs did not all start at 0 (some started at 1)
 # 'Non' and 'Unscored' still present in the 'score' columns for some rats - remove
@@ -7,6 +9,7 @@ import process_training_data as process_data
 import save_model
 import train_model
 from sklearn.metrics import f1_score
+import pandas as pd
 
 # Set feature path
 feature_path = '/Users/phil/philclarkphd/sleep/sleep_data/df_features_041924.csv'
@@ -110,5 +113,12 @@ metadata = {
 
 # Save model and metadata
 SAVE_DIR = '/Users/phil/philclarkphd/sleep/model_artefacts'
-save_model.save_model_and_params(save_dir=SAVE_DIR, model=final_model, params=best_params, file_name=f"{model_name}")
+save_model.save_model_and_params(save_dir=SAVE_DIR, model=final_model, metadata=metadata, file_name=f"{model_name}")
 save_model.save_encoder(save_dir=SAVE_DIR, label_encoder=label_encoding, file_name=f"{model_name}")
+
+# Save test data and predicted values for analysis
+save_path = SAVE_DIR + '/df_test.csv'
+df_test = X_test
+df_test['score'] = y_test
+df_test['pred'] = y_test_pred
+df_test.to_csv(save_path)

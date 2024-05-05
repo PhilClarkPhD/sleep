@@ -1,7 +1,7 @@
 def save_model_and_params(
         save_dir: str,
         model,
-        params: dict,
+        metadata: dict,
         file_name: str,
 ) -> None:
     import os
@@ -12,7 +12,7 @@ def save_model_and_params(
         raise FileNotFoundError(f"The path {save_dir} does not exist")
 
     else:
-        joblib.dump((model, params), f'{save_dir}/{file_name}.pkl') #pkl and save the model/hyperparams
+        joblib.dump((model, metadata), f'{save_dir}/{file_name}.pkl') #pkl and save the model/hyperparams
 
 
 
