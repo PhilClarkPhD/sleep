@@ -292,7 +292,9 @@ def generate_features(data: pd.DataFrame, start_epoch: int = 9) -> pd.DataFrame:
 
 
 def plot_confusion_matrix(y: np.ndarray, y_predict: np.ndarray, label_list: list) -> np.ndarray:
-    "this function plots the confusion matrix"
+    """
+    This function plots the confusion matrix
+    """
 
     cm = confusion_matrix(y, y_predict)
     ax = plt.subplot()
