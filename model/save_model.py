@@ -29,4 +29,4 @@ def save_encoder(
         raise FileNotFoundError(f"The path {save_dir} does not exist")
 
     else:
-        joblib.dump(label_encoder, f'{save_dir}/{file_name}_label_encoder.pkl')
+        joblib.dump(label_encoder, f'{save_dir}/{file_name}_label_encodings.pkl')

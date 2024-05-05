@@ -116,7 +116,7 @@ print(metadata)
 ## Save model and metadata
 SAVE_DIR = '/Users/phil/philclarkphd/sleep/model_artefacts'
 save_model.save_model_and_params(save_dir=SAVE_DIR, model=final_model, params=best_params, file_name=f"{model_name}")
-save_model.save_encoder(save_dir=SAVE_DIR, label_encoder=label_encoding, file_name=f"{model_name}_label_encodings")
+save_model.save_encoder(save_dir=SAVE_DIR, label_encoder=label_encoding, file_name=f"{model_name}")
 
 
 
