@@ -1,31 +1,31 @@
-import os
-import sys
 import pandas as pd
 
-def load_data(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path)
-    return df
 
 def train_test_split(
-        df: pd.DataFrame,
-        feature_cols: list,
-        train_size: float = 0.8,
-        time_series_idx: str = 'epoch',
-        group_col: str = 'ID_day',
-        target_col: str = 'score'
+    df: pd.DataFrame,
+    feature_cols: list,
+    train_size: float = 0.8,
+    time_series_idx: str = "epoch",
+    group_col: str = "ID_day",
+    target_col: str = "score",
 ) -> tuple:
-    """Splits data into train and test sets. Splitting is done equally across all values in the group_col.
+    """
+    Splits data into train and test sets. Splitting is done equally across all values in the group_col.
     Splits done in time-series fashion - e.g. both train and test are continuous values wrt the time_series_idx.
 
-    Args
-    - df {pd.DataFrame}: A pandas dataframe with the data, group var, and some time-series indicator. Required
-    - feature_cols {list} : List of columns to retain as predictors. Required.
-    - train_size {float}: Proportion (between 0 and 1) of data to ues in the training set. Test set will be the
-    remainder. Defaults to 0.8.
-    - time_series_idx {str}: Column name to use to order rows prior to splitting train and test. Defaults to 'epoch'.
-    - group_col {str}: Column name to use for grouping data to ensure equal sampling across subjects. Defaults to
-    'ID_day'
-    - target_col {str}: Column name of variable that is target of model predictions. Defaults to 'score'
+    Args:
+        df (pd.DataFrame):  A pandas dataframe with the data, group var, and some time-series indicator.
+        feature_cols (list): List of columns to retain as predictors.
+        train_size (float): Proportion (between 0 and 1) of data to ues in the training set. Test set will be the
+        remainder. Defaults to 0.8.
+        time_series_idx (str): Column name to use to order rows prior to splitting train and test. Defaults to 'epoch'.
+        group_col (str): Column name to use for grouping data to ensure equal sampling across subjects. Defaults to
+        'ID_day'.
+        target_col (str): Column name of variable that is target of model predictions. Default value is 'score'.
+
+    Returns:
+        (pd.DataFrame): training data.
+        (pd.DataFrame): test data.
     """
 
     # First enforce correct order of time_col by sorting the values within each group of group_col
@@ -51,12 +51,4 @@ def train_test_split(
     train_set = df.loc[train_indices]
     test_set = df.loc[test_indices]
 
-
-    # Final split into train and test
-    X_train = train_set[feature_cols]
-    y_train = train_set[target_col]
-
-    X_test = test_set[feature_cols]
-    y_test = test_set[target_col]
-
-    return X_train, y_train, X_test, y_test
+    return train_set, test_set
