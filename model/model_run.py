@@ -133,7 +133,7 @@ metadata = {
 }
 
 # Save model and metadata
-SAVE_DIR = "/Users/phil/philclarkphd/sleep/model_artefacts"
+SAVE_DIR = "/model_artifacts"
 save_model.save_model_and_params(
     save_dir=SAVE_DIR, model=final_model, metadata=metadata, model_name=f"{model_name}"
 )
