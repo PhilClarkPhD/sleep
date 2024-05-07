@@ -17,10 +17,11 @@ Run `python -m pip install -r requirements.txt`
 9. Go back to the home tab to see how well the model worked!
 
 ## *In this repo...*
-* **/sample data:** This folder contains sample EEG/EMG data, example scores, and the classification model saved as a .pkl file
+* **/sample_data:** This folder contains sample EEG/EMG data, example scores, and the classification model saved as a .pkl file
 * **Mora.py:** This file contains the PyQT code for running the application, including all plots, buttons, etc. See the walkthrough video above!
-* **sleep_functions.py:** This file contains the functions required for generating the power spectrum as well as the metrics that feed ML model. 
-* **sample data:** This folder contains sample data, scores, and model to play with!
+* **/model:** This folder contains all the code to train and save models. 
+* **/data_processing:** This folder contains the modules needed for feature engineering and data pre-processing.
+* **sample_data:** This folder contains sample data, scores, and model to play with!
 * **requirements.txt:** Dependencies for running this program
 
 ## *Background*
