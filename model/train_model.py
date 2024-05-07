@@ -92,4 +92,4 @@ def train_model(X: pd.DataFrame, y: pd.DataFrame, params: dict) -> tuple:
     # Decode the predicted values
     y_pred_decoded = label_encoder.inverse_transform(y_pred)
 
-    return model, y_pred_decoded, time_to_fit, label_encoder.classes_
+    return model, y_pred_decoded, time_to_fit, label_encoder

@@ -6,9 +6,20 @@ Consider moving model code to new window pop up
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, \
-    QFileDialog, QLabel, QInputDialog, QMessageBox, QTabWidget, QVBoxLayout, \
-    QGridLayout, QComboBox, QHBoxLayout
+from PyQt5.QtWidgets import (
+    QApplication,
+    QWidget,
+    QPushButton,
+    QFileDialog,
+    QLabel,
+    QInputDialog,
+    QMessageBox,
+    QTabWidget,
+    QVBoxLayout,
+    QGridLayout,
+    QComboBox,
+    QHBoxLayout,
+)
 from PyQt5.QtGui import QKeyEvent
 import sys
 from scipy.io import wavfile
@@ -16,8 +27,8 @@ import data_processing.sleep_functions as sleep
 import os
 from pycaret.classification import *
 
-pg.setConfigOption('background', "w")
-pg.setConfigOption('foreground', "k")
+pg.setConfigOption("background", "w")
+pg.setConfigOption("foreground", "k")
 
 # starting path
 START_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -27,7 +38,7 @@ class Window(QWidget):
     def __init__(self):
         super().__init__()
         self.setGeometry(50, 50, 1125, 525)
-        self.setWindowTitle('Mora Sleep Analysis')
+        self.setWindowTitle("Mora Sleep Analysis")
         self.setStyleSheet("font-size: 20px;")
 
         # path variables
@@ -40,17 +51,19 @@ class Window(QWidget):
         # warning box for clearing scores
         self.warning = QMessageBox()
         self.warning.setIcon(QMessageBox.Warning)
-        self.warning.setText('Are you sure you want to clear scores?')
+        self.warning.setText("Are you sure you want to clear scores?")
         self.warning.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
 
         # Model labels
-        self.model_display = QLabel('Current_Model: None', self)
-        self.scoring_complete = QLabel('', self)
+        self.model_display = QLabel("Current_Model: None", self)
+        self.scoring_complete = QLabel("", self)
 
         # data objects
         self.epoch_dict = {}
-        self.df = pd.DataFrame(columns=['eeg', 'emg'])
-        self.metrics = pd.DataFrame(columns=['delta_rel', 'theta_rel', 'theta_over_delta'])
+        self.df = pd.DataFrame(columns=["eeg", "emg"])
+        self.metrics = pd.DataFrame(
+            columns=["delta_rel", "theta_rel", "theta_over_delta"]
+        )
         self.samplerate = np.NaN
         self.epoch = 0
         self.window_num = 5
@@ -61,29 +74,34 @@ class Window(QWidget):
         self.eeg_power = {}
         self.emg_power = {}
 
-
         self.wake_count = 0
         self.nrem_count = 0
         self.rem_count = 0
 
         # create plot objects in window
         self.window_size = QComboBox(self)
-        self.eeg_plot = pg.PlotWidget(self, title='EEG')
-        self.line1 = pg.InfiniteLine(pos=80, movable=True, angle=0, pen=pg.mkPen(width=3, color='r'))
-        self.line2 = pg.InfiniteLine(pos=-80, movable=True, angle=0, pen=pg.mkPen(width=3, color='r'))
-        self.emg_plot = pg.PlotWidget(self, title='EMG')
-        self.eeg_power_plot = pg.PlotWidget(self, title='Power Spectrum')
-        self.eeg_bar_plot = pg.PlotWidget(self, title='Relative Power')
+        self.eeg_plot = pg.PlotWidget(self, title="EEG")
+        self.line1 = pg.InfiniteLine(
+            pos=80, movable=True, angle=0, pen=pg.mkPen(width=3, color="r")
+        )
+        self.line2 = pg.InfiniteLine(
+            pos=-80, movable=True, angle=0, pen=pg.mkPen(width=3, color="r")
+        )
+        self.emg_plot = pg.PlotWidget(self, title="EMG")
+        self.eeg_power_plot = pg.PlotWidget(self, title="Power Spectrum")
+        self.eeg_bar_plot = pg.PlotWidget(self, title="Relative Power")
 
         self.rel_delta = pg.BarGraphItem(x=[], height=[], width=0.6)
         self.rel_theta = pg.BarGraphItem(x=[], height=[], width=0.6)
-        self.labels = {0: 'delta', 1: 'theta'}
-        (self.eeg_bar_plot.getAxis('bottom')).setTicks([self.labels.items()])
+        self.labels = {0: "delta", 1: "theta"}
+        (self.eeg_bar_plot.getAxis("bottom")).setTicks([self.labels.items()])
 
-        self.hypnogram = pg.PlotWidget(self, title='Hypnogram')
-        self.hyp_labels = {0: 'Wake', 1: 'Non REM', 2: 'REM', 3: 'Unscored'}
-        (self.hypnogram.getAxis('left')).setTicks([self.hyp_labels.items()])
-        self.hypno_line = pg.InfiniteLine(pos=self.epoch, movable=True, angle=90, pen=pg.mkPen(width=3, color='r'))
+        self.hypnogram = pg.PlotWidget(self, title="Hypnogram")
+        self.hyp_labels = {0: "Wake", 1: "Non REM", 2: "REM", 3: "Unscored"}
+        (self.hypnogram.getAxis("left")).setTicks([self.hyp_labels.items()])
+        self.hypno_line = pg.InfiniteLine(
+            pos=self.epoch, movable=True, angle=90, pen=pg.mkPen(width=3, color="r")
+        )
 
         # brushes for coloring scoring windows
         self.rem = pg.mkBrush(pg.intColor(90, alpha=50))
@@ -100,20 +118,22 @@ class Window(QWidget):
         self.epoch_win = QLabel("Epoch: {} ".format(self.epoch), self)
 
         # current file label
-        self.file_win = QLabel('', self)
+        self.file_win = QLabel("", self)
 
         # current score label
-        self.score_win = QLabel('', self)
+        self.score_win = QLabel("", self)
 
         # axes for raw eeg/emg plots
         self.x_axis = []
 
         # y axis for eeg barplot
-        self.delta_vals = self.metrics[['delta_rel']].values
-        self.theta_vals = self.metrics[['theta_rel']].values
+        self.delta_vals = self.metrics[["delta_rel"]].values
+        self.theta_vals = self.metrics[["theta_rel"]].values
 
         # Model objects
         self.model = np.NaN
+        self.params = {}
+        self.label_encoder = {}
         self.scores = np.NaN
 
         # Set Layout
@@ -121,8 +141,8 @@ class Window(QWidget):
         self.setLayout(layout)
 
         tabs = QTabWidget()
-        tabs.addTab(self.home(), 'Home')
-        tabs.addTab(self.model_tab(), 'Model')
+        tabs.addTab(self.home(), "Home")
+        tabs.addTab(self.model_tab(), "Model")
 
         layout.addWidget(tabs)
 
@@ -138,50 +158,50 @@ class Window(QWidget):
 
         # Define buttons and add to top layout
         # load data button
-        load_data_btn = QPushButton('Load Data', self)
+        load_data_btn = QPushButton("Load Data", self)
         load_data_btn.clicked.connect(self.load_data)
         button_layout.addWidget(load_data_btn, 0, 0)
 
         # load scores button
-        load_scores_btn = QPushButton('Load Scores', self)
+        load_scores_btn = QPushButton("Load Scores", self)
         load_scores_btn.clicked.connect(self.load_scores)
         button_layout.addWidget(load_scores_btn, 0, 1)
 
         # clear scores on current file
-        clear_scores_btn = QPushButton('Clear Scores', self)
+        clear_scores_btn = QPushButton("Clear Scores", self)
         clear_scores_btn.clicked.connect(self.clear_scores)
         button_layout.addWidget(clear_scores_btn, 0, 5)
 
         # export scores as .txt
-        export_scores_btn = QPushButton('Export Scores', self)
+        export_scores_btn = QPushButton("Export Scores", self)
         export_scores_btn.clicked.connect(self.export_scores)
         button_layout.addWidget(export_scores_btn, 0, 4)
 
         # export score breakdown as .csv
-        export_breakdown_btn = QPushButton('Export Breakdown', self)
+        export_breakdown_btn = QPushButton("Export Breakdown", self)
         export_breakdown_btn.clicked.connect(self.export_breakdown)
-        button_layout.addWidget(export_breakdown_btn, 1,4)
+        button_layout.addWidget(export_breakdown_btn, 1, 4)
 
         # move window to epoch of your choosing
-        find_epoch_btn = QPushButton('Find epoch', self)
+        find_epoch_btn = QPushButton("Find epoch", self)
         find_epoch_btn.clicked.connect(self.find_epoch)
         button_layout.addWidget(find_epoch_btn, 1, 2)
 
         # Window size dropdown
-        self.window_size.addItems(['5', '1', '3', '7'])
+        self.window_size.addItems(["5", "1", "3", "7"])
         self.window_size.currentTextChanged.connect(self.update_plots)
         button_layout.addWidget(self.window_size, 0, 2)
 
-        #next REM button
-        next_REM_btn = QPushButton('Next: {}'.format("REM"), self)
+        # next REM button
+        next_REM_btn = QPushButton("Next: {}".format("REM"), self)
         next_REM_btn.clicked.connect(self.next_rem)
         button_layout.addWidget(next_REM_btn, 0, 3)
 
         # file name labels
-        self.file_win.setText('File: {}'.format('N/A'))
+        self.file_win.setText("File: {}".format("N/A"))
         button_layout.addWidget(self.file_win, 1, 0)
 
-        self.score_win.setText('Scores: {}'.format('N/A'))
+        self.score_win.setText("Scores: {}".format("N/A"))
         button_layout.addWidget(self.score_win, 1, 1)
 
         # Current epoch label
@@ -218,84 +238,105 @@ class Window(QWidget):
         return home
 
     def find_epoch(self) -> None:
-        num, ok = QInputDialog.getInt(self,
-                                      'Find epoch',
-                                      'Enter value between 0 and {}'.format(str(len(self.epoch_list) - 1)),
-                                      value=self.epoch,
-                                      min=0,
-                                      max=len(self.epoch_list) - 1)
+        num, ok = QInputDialog.getInt(
+            self,
+            "Find epoch",
+            "Enter value between 0 and {}".format(str(len(self.epoch_list) - 1)),
+            value=self.epoch,
+            min=0,
+            max=len(self.epoch_list) - 1,
+        )
 
         if ok:
             self.epoch = num
             self.update_plots()
 
     def load_data(self) -> None:
-        path, ext = QFileDialog.getOpenFileName(self, 'Open .wav file', self.current_path, '(*.wav)')
+        path, ext = QFileDialog.getOpenFileName(
+            self, "Open .wav file", self.current_path, "(*.wav)"
+        )
 
         if path:
             self.current_path = os.path.dirname(path)
-            self.file_win.setText('File: {}'.format(str(os.path.basename(path))))
+            self.file_win.setText("File: {}".format(str(os.path.basename(path))))
 
             self.samplerate, data = wavfile.read(path)
             self.array_size = self.samplerate * 10
-            self.df = pd.DataFrame(data=data, columns=['eeg', 'emg'])
-
+            self.df = pd.DataFrame(data=data, columns=["eeg", "emg"])
 
             # Compute power spectrum, relative power metrics
-            eeg_power, emg_power = sleep.compute_power(self.df, samplerate=self.samplerate)
+            eeg_power, emg_power = sleep.compute_power(
+                self.df, samplerate=self.samplerate
+            )
             smoothed_eeg, smoothed_emg = sleep.smooth_signal(eeg_power, emg_power)
             relative_power = sleep.compute_relative_power(smoothed_eeg)
 
-            self.metrics = relative_power[['delta_rel', 'theta_rel', 'theta_over_delta']]
+            self.metrics = relative_power[
+                ["delta_rel", "theta_rel", "theta_over_delta"]
+            ]
             self.epoch_list = relative_power.index
             self.eeg_power = smoothed_eeg
             self.emg_power = smoothed_emg
-            self.delta_vals = self.metrics[['delta_rel']].values
-            self.theta_vals = self.metrics[['theta_rel']].values
+            self.delta_vals = self.metrics[["delta_rel"]].values
+            self.theta_vals = self.metrics[["theta_rel"]].values
             self.update_plots()
 
     def load_scores(self) -> None:
-        path, ext = QFileDialog.getOpenFileName(self, 'Open .txt file', self.current_path, '(*.txt)')
+        path, ext = QFileDialog.getOpenFileName(
+            self, "Open .txt file", self.current_path, "(*.txt)"
+        )
 
         if path:
             self.current_path = os.path.dirname(path)
-            self.score_win.setText('Scores: {}'.format(str(os.path.basename(path))))
+            self.score_win.setText("Scores: {}".format(str(os.path.basename(path))))
 
             score_import = pd.read_csv(path)
-            score_import.rename(columns=lambda x: x.strip(), inplace=True) #remove whitespace
+            score_import.rename(
+                columns=lambda x: x.strip(), inplace=True
+            )  # remove whitespace
 
             if score_import.shape[1] > 2:
                 # subtract 1 to force epoch start at 0 when loading scores from Sirenia
-                self.epoch_dict = dict(zip(score_import['Epoch #'].values - 1, score_import['Score'].values))
+                self.epoch_dict = dict(
+                    zip(
+                        score_import["Epoch #"].values - 1, score_import["Score"].values
+                    )
+                )
             else:
-                self.epoch_dict = dict(zip(score_import['epoch'].values, score_import['score'].values))
+                self.epoch_dict = dict(
+                    zip(score_import["epoch"].values, score_import["score"].values)
+                )
 
             self.update_plots()
             self.plot_hypnogram()
 
     def name_file(self) -> str:
         get_name = QInputDialog()
-        name, ok = get_name.getText(self, 'Enter file name', 'Enter file name')
+        name, ok = get_name.getText(self, "Enter file name", "Enter file name")
         if ok:
             return name
         else:
-            raise ValueError('Not a valid input')
+            raise ValueError("Not a valid input")
 
     def export_scores(self) -> None:
         name = str(self.name_file())
-        file = QFileDialog.getExistingDirectory(self, 'Select folder', self.current_path)
-        file_path = file + '/' + name
+        file = QFileDialog.getExistingDirectory(
+            self, "Select folder", self.current_path
+        )
+        file_path = file + "/" + name
 
-        score_export = pd.DataFrame([self.epoch_dict.keys(), self.epoch_dict.values()]).T
-        score_export.columns = ['epoch', 'score']
-        score_export.to_csv(file_path + '.txt', sep=',', index=False)
+        score_export = pd.DataFrame(
+            [self.epoch_dict.keys(), self.epoch_dict.values()]
+        ).T
+        score_export.columns = ["epoch", "score"]
+        score_export.to_csv(file_path + ".txt", sep=",", index=False)
 
-    def breakdown_scores(self, epoch:str) -> None:
-        if epoch == 'Wake':
+    def breakdown_scores(self, epoch: str) -> None:
+        if epoch == "Wake":
             self.wake_count += 1
-        elif epoch == 'Non REM':
+        elif epoch == "Non REM":
             self.nrem_count += 1
-        elif epoch == 'REM':
+        elif epoch == "REM":
             self.rem_count += 1
         else:
             next
@@ -308,22 +349,24 @@ class Window(QWidget):
         nrem_proportion = round(self.nrem_count / total, 2)
         wake_proportion = round(self.wake_count / total, 2)
 
-        labels = ['Wake','Non REM','REM']
+        labels = ["Wake", "Non REM", "REM"]
         proportions = [wake_proportion, nrem_proportion, rem_proportion]
         totals = [self.wake_count, self.nrem_count, self.rem_count]
 
-        output = pd.DataFrame([labels,totals,proportions]).T
-        output.columns = ['Stage','Epochs','Proportion']
+        output = pd.DataFrame([labels, totals, proportions]).T
+        output.columns = ["Stage", "Epochs", "Proportion"]
 
         return output
 
     def export_breakdown(self):
         name = str(self.name_file())
-        file = QFileDialog.getExistingDirectory(self, 'Select folder', self.current_path)
-        file_path = file + '/' + name
+        file = QFileDialog.getExistingDirectory(
+            self, "Select folder", self.current_path
+        )
+        file_path = file + "/" + name
 
         breakdown = self.breakdown_df()
-        breakdown.to_csv(file_path + '.csv', sep=',', index=False)
+        breakdown.to_csv(file_path + ".csv", sep=",", index=False)
 
     def next_rem(self) -> None:
         for key in range(self.epoch + 1, self.epoch_list[-1]):
@@ -340,7 +383,7 @@ class Window(QWidget):
     def clear_scores(self) -> None:
         val = self.warning.exec()
         if val == QMessageBox.Ok:
-            self.score_win.setText('Scores: {}'.format('N/A'))
+            self.score_win.setText("Scores: {}".format("N/A"))
             self.epoch_dict = {}
             self.plot_hypnogram()
             self.update_plots()
@@ -350,9 +393,9 @@ class Window(QWidget):
     def check_epoch(self, modifier: int) -> None:
         new_epoch = self.epoch + modifier
         if new_epoch not in range(0, len(self.epoch_list)):
-            self.error_box.setText('Not a valid epoch')
+            self.error_box.setText("Not a valid epoch")
             self.error_box.exec_()
-            raise KeyError('Not a valid epoch')
+            raise KeyError("Not a valid epoch")
 
     def calculate_eeg_axes(self) -> dict:
         # x axis for eeg/emg plots
@@ -364,7 +407,9 @@ class Window(QWidget):
         self.window_end = self.window_start + self.array_size
 
         # modify x axis according to user-selected window size
-        x_start = int(self.window_start - (((self.window_num - 1) / 2) * self.array_size))
+        x_start = int(
+            self.window_start - (((self.window_num - 1) / 2) * self.array_size)
+        )
         x_end = int(self.window_end + (((self.window_num - 1) / 2) * self.array_size))
 
         # limit x axis to begin at 0
@@ -375,13 +420,14 @@ class Window(QWidget):
         self.x_axis = np.arange(x_start, x_end)
 
         # convert x values to time
-        x_labels = np.linspace((x_start / self.samplerate), (x_end / self.samplerate),
-                               self.window_num + 1)
+        x_labels = np.linspace(
+            (x_start / self.samplerate), (x_end / self.samplerate), self.window_num + 1
+        )
         x_anchors = np.linspace(x_start, x_end, self.window_num + 1)
         x_labels = dict(zip(x_anchors, x_labels))
 
         # Deal with mismatch in window length and data length at end of dataframe
-        if len(self.x_axis) != len(self.df['eeg'][x_start:x_end]):
+        if len(self.x_axis) != len(self.df["eeg"][x_start:x_end]):
             self.x_axis = np.arange(self.x_axis[0], len(self.df))
 
         return x_labels
@@ -390,19 +436,34 @@ class Window(QWidget):
         begin = self.x_axis[0] + i * self.array_size
         end = begin + self.array_size
 
-        self.eeg_plot.addItem(pg.LinearRegionItem([begin, end], movable=False,
-                                                  brush=self.color_scheme(begin / self.array_size)))
-        self.emg_plot.addItem(pg.LinearRegionItem([begin, end], movable=False,
-                                                  brush=self.color_scheme(begin / self.array_size)))
+        self.eeg_plot.addItem(
+            pg.LinearRegionItem(
+                [begin, end],
+                movable=False,
+                brush=self.color_scheme(begin / self.array_size),
+            )
+        )
+        self.emg_plot.addItem(
+            pg.LinearRegionItem(
+                [begin, end],
+                movable=False,
+                brush=self.color_scheme(begin / self.array_size),
+            )
+        )
 
     def plot_relative_power(self) -> None:
         self.eeg_bar_plot.removeItem(self.rel_delta)
         self.eeg_bar_plot.removeItem(self.rel_theta)
 
-        self.rel_delta = pg.BarGraphItem(x=[0], height=self.delta_vals[self.epoch], width=0.8,
-                                         brush=self.non_rem_center)
-        self.rel_theta = pg.BarGraphItem(x=[1], height=self.theta_vals[self.epoch], width=0.8,
-                                         brush=self.rem_center)
+        self.rel_delta = pg.BarGraphItem(
+            x=[0],
+            height=self.delta_vals[self.epoch],
+            width=0.8,
+            brush=self.non_rem_center,
+        )
+        self.rel_theta = pg.BarGraphItem(
+            x=[1], height=self.theta_vals[self.epoch], width=0.8, brush=self.rem_center
+        )
 
         self.eeg_bar_plot.addItem(self.rel_delta)
         self.eeg_bar_plot.addItem(self.rel_theta)
@@ -411,56 +472,84 @@ class Window(QWidget):
         x_labels = self.calculate_eeg_axes()
 
         # eeg plot
-        self.eeg_plot.plot(x=self.x_axis, y=self.df['eeg'][self.x_axis[0]:self.x_axis[-1] + 1], pen='k', clear=True)
+        self.eeg_plot.plot(
+            x=self.x_axis,
+            y=self.df["eeg"][self.x_axis[0] : self.x_axis[-1] + 1],
+            pen="k",
+            clear=True,
+        )
         self.eeg_plot.addItem(self.line1)
         self.eeg_plot.addItem(self.line2)
-        ax1 = self.eeg_plot.getAxis('bottom')
+        ax1 = self.eeg_plot.getAxis("bottom")
         ax1.setTicks([x_labels.items()])
 
         # emg plot
-        self.emg_plot.plot(x=self.x_axis, y=self.df['emg'][self.x_axis[0]:self.x_axis[-1] + 1], pen='k', clear=True)
-        ax2 = self.emg_plot.getAxis('bottom')
+        self.emg_plot.plot(
+            x=self.x_axis,
+            y=self.df["emg"][self.x_axis[0] : self.x_axis[-1] + 1],
+            pen="k",
+            clear=True,
+        )
+        ax2 = self.emg_plot.getAxis("bottom")
         ax2.setTicks([x_labels.items()])
 
         # shading for eeg and emg windows
         [self.plot_shading(i) for i in range(self.window_num)]
-        self.eeg_plot.addItem(pg.LinearRegionItem([self.window_start, self.window_end], movable=False,
-                                                  brush=self.color_scheme(self.epoch, center=True)))
-        self.emg_plot.addItem(pg.LinearRegionItem([self.window_start, self.window_end], movable=False,
-                                                  brush=self.color_scheme(self.epoch, center=True)))
+        self.eeg_plot.addItem(
+            pg.LinearRegionItem(
+                [self.window_start, self.window_end],
+                movable=False,
+                brush=self.color_scheme(self.epoch, center=True),
+            )
+        )
+        self.emg_plot.addItem(
+            pg.LinearRegionItem(
+                [self.window_start, self.window_end],
+                movable=False,
+                brush=self.color_scheme(self.epoch, center=True),
+            )
+        )
 
         # power spectrum plots
         power_x_axis = np.arange(0, (len(self.eeg_power[self.epoch]) * 0.1), 0.1)
-        self.eeg_power_plot.plot(x=power_x_axis, y=self.eeg_power[self.epoch], pen=pg.mkPen('k', width=2), clear=True)
+        self.eeg_power_plot.plot(
+            x=power_x_axis,
+            y=self.eeg_power[self.epoch],
+            pen=pg.mkPen("k", width=2),
+            clear=True,
+        )
 
         # relative power bar plot remove old values
         self.plot_relative_power()
 
         # reset hypnogram
         self.hypnogram.removeItem(self.hypno_line)
-        self.hypno_line = pg.InfiniteLine(pos=self.epoch, movable=True, angle=90, pen=pg.mkPen(width=3, color='r'))
+        self.hypno_line = pg.InfiniteLine(
+            pos=self.epoch, movable=True, angle=90, pen=pg.mkPen(width=3, color="r")
+        )
         self.hypno_line.sigPositionChangeFinished.connect(self.hypno_go)
         self.hypnogram.addItem(self.hypno_line)
 
     @staticmethod
     def convert_to_numbers(x: str) -> int:
-        if x == 'Wake':
+        if x == "Wake":
             return 0
-        if x == 'Non REM':
+        if x == "Non REM":
             return 1
-        if x == 'REM':
+        if x == "REM":
             return 2
-        if x == 'Unscored':
+        if x == "Unscored":
             return 3
         else:
             return np.NaN
 
-    def plot_hypnogram(self) -> pg.plot: #TODO: This plot does not render for 171N_bl
+    def plot_hypnogram(self) -> pg.plot:  # TODO: This plot does not render for 171N_bl
         hypno_list = [self.convert_to_numbers(x) for x in self.epoch_dict.values()]
         epoch_list = list(self.epoch_dict.keys())
 
-        return self.hypnogram.plot(x=epoch_list, y=hypno_list,
-                                   pen=pg.mkPen('k', width=2), clear=True)
+        return self.hypnogram.plot(
+            x=epoch_list, y=hypno_list, pen=pg.mkPen("k", width=2), clear=True
+        )
 
     def hypno_go(self) -> None:
         self.epoch = round(self.hypno_line.value())
@@ -468,19 +557,19 @@ class Window(QWidget):
 
     def color_scheme(self, epoch: int, center: bool = False) -> pg.mkBrush:
         try:
-            if self.epoch_dict[epoch] == 'REM' and not center:
+            if self.epoch_dict[epoch] == "REM" and not center:
                 return self.rem
-            elif self.epoch_dict[epoch] == 'REM' and center:
+            elif self.epoch_dict[epoch] == "REM" and center:
                 return self.rem_center
-            elif self.epoch_dict[epoch] == 'Non REM' and not center:
+            elif self.epoch_dict[epoch] == "Non REM" and not center:
                 return self.non_rem
-            elif self.epoch_dict[epoch] == 'Non REM' and center:
+            elif self.epoch_dict[epoch] == "Non REM" and center:
                 return self.non_rem_center
-            elif self.epoch_dict[epoch] == 'Wake' and not center:
+            elif self.epoch_dict[epoch] == "Wake" and not center:
                 return self.wake
-            elif self.epoch_dict[epoch] == 'Wake' and center:
+            elif self.epoch_dict[epoch] == "Wake" and center:
                 return self.wake_center
-            elif self.epoch_dict[epoch] == 'Unscored' and center:
+            elif self.epoch_dict[epoch] == "Unscored" and center:
                 return self.unscored_center
             elif self.epoch_dict[epoch] == [] and center:
                 return self.unscored_center
@@ -494,7 +583,7 @@ class Window(QWidget):
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() == 87:
-            self.epoch_dict[self.epoch] = 'Wake'
+            self.epoch_dict[self.epoch] = "Wake"
             # 'Wake'
             self.check_epoch(1)
             self.epoch += 1
@@ -502,7 +591,7 @@ class Window(QWidget):
             self.update_plots()
 
         if event.key() == 69:
-            self.epoch_dict[self.epoch] = 'Non REM'
+            self.epoch_dict[self.epoch] = "Non REM"
             # 'Non REM'
             self.check_epoch(1)
             self.epoch += 1
@@ -510,7 +599,7 @@ class Window(QWidget):
             self.update_plots()
 
         if event.key() == 82:
-            self.epoch_dict[self.epoch] = 'REM'
+            self.epoch_dict[self.epoch] = "REM"
             # 'REM'
             self.check_epoch(1)
             self.epoch += 1
@@ -518,7 +607,7 @@ class Window(QWidget):
             self.update_plots()
 
         if event.key() == 84:
-            self.epoch_dict[self.epoch] = 'Unscored'
+            self.epoch_dict[self.epoch] = "Unscored"
             # 'Unscored'
             self.check_epoch(1)
             self.epoch += 1
@@ -542,11 +631,11 @@ class Window(QWidget):
 
         layout = QGridLayout()
 
-        load_model_btn = QPushButton('Load Model', self)
+        load_model_btn = QPushButton("Load Model", self)
         load_model_btn.clicked.connect(self.load_model)
         layout.addWidget(load_model_btn, 0, 0)
 
-        score_data_btn = QPushButton('Score Data', self)
+        score_data_btn = QPushButton("Score Data", self)
         score_data_btn.clicked.connect(self.score_data)
         layout.addWidget(score_data_btn, 0, 1)
 
@@ -558,38 +647,68 @@ class Window(QWidget):
         return model_tab
 
     def load_model(self) -> None:
+        import joblib
 
-        file = QFileDialog.getOpenFileName(self, 'Open .wav file', self.current_path, '(*.joblib *.pkl)')
-        file_path = file[0]
-        self.current_path = os.path.dirname(file_path)
-        file = os.path.splitext(file_path)[0]
+        model_path, *_ = QFileDialog.getOpenFileName(
+            self, "Open .pkl file", self.current_path, "(*.joblib *.pkl)"
+        )
 
-        self.model = load_model(file)
-        self.model_display.setText('Current_Model: {}'.format(str(os.path.basename(file_path))))
-        self.scoring_complete.setText('')
+        # Reset current path
+        self.current_path = os.path.dirname(model_path)
+
+        # Get model and params from model_path
+        model, params, label_encoder = joblib.load(model_path)
+
+        # Set class attribute values and display
+        self.model = model
+        self.params = params
+        self.label_encoder = label_encoder
+        self.model_display.setText(
+            "Current_Model: {}".format(self.params["model_name"])
+        )
+        self.scoring_complete.setText("")
 
     def score_data(self) -> None:
 
-        num, ok = QInputDialog.getInt(self,
-                                      'Enter Epoch Number',
-                                      'Select representative epoch',
-                                      min=0,
-                                      max=len(self.epoch_list) - 1,
-                                      value=2)
+        num, ok = QInputDialog.getInt(
+            self,
+            "Enter Epoch Number",
+            "Select representative epoch",
+            min=0,
+            max=len(self.epoch_list) - 1,
+            value=2,
+        )
 
         if ok:
             self.epoch = num
 
         self.metrics = sleep.generate_features(self.df, self.epoch)
-        features = self.metrics[['EEG_std', 'EEG_amp', 'EMG_std', 'delta_rel', 'theta_rel', 'theta_over_delta']]
 
-        predictions = predict_model(self.model, features)
-        self.scores = sleep.modify_scores(predictions['Label'].values)
+        features = self.metrics[
+            [
+                "EEG_std",
+                "EEG_ss",
+                "EEG_amp",
+                "EMG_std",
+                "EMG_ss",
+                "EMG_events",
+                "delta_rel",
+                "theta_rel",
+                "theta_over_delta",
+            ]
+        ]
+
+        predictions = self.model.predict(features)
+        decoded_predictions = self.label_encoder.inverse_transform(predictions)
+        self.score = decoded_predictions
+
+        # temporarily deprecating modify_scores until we figure out the best way to implement it
+        # self.scores = sleep.modify_scores(decoded_predictions)
 
         self.epoch_dict = dict(zip(self.epoch_list, self.scores))
         self.update_plots()
         self.plot_hypnogram()
-        self.scoring_complete.setText('Scoring Complete!')
+        self.scoring_complete.setText("Scoring Complete!")
 
 
 def run():
@@ -599,5 +718,5 @@ def run():
     sys.exit(app.exec_())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()

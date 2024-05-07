@@ -88,7 +88,7 @@ y = df[target_col]
 model_version = "1.0"
 model_name = f"XGBoost_{model_version}"
 
-final_model, y_pred, time_to_fit, label_encoding = train_model.train_model(
+final_model, y_pred, time_to_fit, label_encoder = train_model.train_model(
     X, y, best_params
 )
 
@@ -126,19 +126,20 @@ metadata = {
     "search_duration": search_duration,
     "train_features_importance": train_feature_importance,
     "train_score": train_score,
-    "label_encoding": label_encoding,
+    "label_encoder": label_encoder.classes_,
     "time_to_fit": time_to_fit,
     "model_score": model_score,
     "notes": notes,
 }
 
 # Save model and metadata
-SAVE_DIR = "/model_artifacts"
-save_model.save_model_and_params(
-    save_dir=SAVE_DIR, model=final_model, metadata=metadata, model_name=f"{model_name}"
-)
-save_model.save_encoder(
-    save_dir=SAVE_DIR, label_encodings=label_encoding, model_name=f"{model_name}"
+SAVE_DIR = "/Users/phil/philclarkphd/sleep/model_artifacts"
+save_model.save_model_artifacts(
+    save_dir=SAVE_DIR,
+    model=final_model,
+    metadata=metadata,
+    encoder=label_encoder,
+    file_name=f"{model_name}_artifacts",
 )
 
 # Save test data and predicted values for analysis

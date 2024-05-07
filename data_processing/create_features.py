@@ -56,22 +56,26 @@ def get_file_paths(base_path: str) -> defaultdict:
 
         # separate .wav and .txt files
         for file in files:
-            if file.endswith('.wav'):
+            if file.endswith(".wav"):
                 wav_file_paths.append(os.path.join(root, file))
-            elif file.endswith('.txt'):
+            elif file.endswith(".txt"):
                 txt_file_paths.append(os.path.join(root, file))
 
     # populate dict with .wav filepaths
     for path in wav_file_paths:
         rat_id = str(os.path.basename(os.path.dirname(path)))
-        day = str.upper(path.split('_')[2].split('.')[0])  # split based on file naming convention (e.g. /171N_BL.wav)
-        path_dict[rat_id][day]['.wav'] = path
+        day = str.upper(
+            path.split("_")[2].split(".")[0]
+        )  # split based on file naming convention (e.g. /171N_BL.wav)
+        path_dict[rat_id][day][".wav"] = path
 
     # populate dict with .txt filepaths
     for path in txt_file_paths:
         rat_id = str(os.path.basename(os.path.dirname(path)))
-        day = str.upper(path.split('_')[2])  # split based on file naming convention (e.g. /171N_BL_scores.txt)
-        path_dict[rat_id][day]['.txt'] = path
+        day = str.upper(
+            path.split("_")[2]
+        )  # split based on file naming convention (e.g. /171N_BL_scores.txt)
+        path_dict[rat_id][day][".txt"] = path
 
     return path_dict
 
@@ -89,16 +93,18 @@ def load_scores(path: str) -> pd.DataFrame:
     """
 
     df_score = pd.read_csv(path)
-    df_score.rename(columns=lambda x: x.strip(), inplace=True)  # remove whitespace from Sirenia's column names
+    df_score.rename(
+        columns=lambda x: x.strip(), inplace=True
+    )  # remove whitespace from Sirenia's column names
 
     if df_score.shape[1] > 2:
         # subtract 1 to force epoch start at 0 when loading scores from Sirenia
-        df_score.rename(columns={'Epoch #': 'epoch', 'Score': 'score'}, inplace=True)
-        df_score['epoch'] = df_score['epoch'] - 1
+        df_score.rename(columns={"Epoch #": "epoch", "Score": "score"}, inplace=True)
+        df_score["epoch"] = df_score["epoch"] - 1
 
-        return df_score[['epoch', 'score']]
+        return df_score[["epoch", "score"]]
     else:
-        return df_score[['epoch', 'score']]
+        return df_score[["epoch", "score"]]
 
 
 def calculate_features(file_paths: defaultdict) -> pd.DataFrame:
@@ -119,24 +125,25 @@ def calculate_features(file_paths: defaultdict) -> pd.DataFrame:
 
     for rat_id in file_paths:
         for day in file_paths[rat_id]:
-            data_path = file_paths[rat_id][day]['.wav']
-            score_path = file_paths[rat_id][day]['.txt']
+            data_path = file_paths[rat_id][day][".wav"]
+            score_path = file_paths[rat_id][day][".txt"]
 
             # read eeg and emg data from .wav file
             samplerate, data = wavfile.read(data_path)
-            df_data = pd.DataFrame(data=data, columns=['eeg', 'emg'])
+            df_data = pd.DataFrame(data=data, columns=["eeg", "emg"])
 
             # make df_features. Add in columns for ID, day, and epoch
             df_features = sleep.generate_features(data=df_data)
-            df_features['ID'] = rat_id
-            df_features['day'] = day
-            df_features['epoch'] = df_features.index
+            df_features["ID"] = rat_id
+            df_features["day"] = day
+            df_features["ID_day"] = rat_id + "_" + day
+            df_features["epoch"] = df_features.index
 
             # get scores in df_score
             df_scores = load_scores(score_path)
 
             # merge feature and score dataframes
-            df_combined = df_features.merge(df_scores, on='epoch', how='inner')
+            df_combined = df_features.merge(df_scores, on="epoch", how="inner")
 
             # add this data to the existing df
             df = pd.concat([df, df_combined])
@@ -146,7 +153,7 @@ def calculate_features(file_paths: defaultdict) -> pd.DataFrame:
 
 def make_feature_df(base_path: str) -> pd.DataFrame:
     """
-    This function runs all of the above functions sequentially and returns the feature df
+    This function runs all the above functions sequentially and returns the feature df
 
     INPUTS
     - base_path: The path to the base folder with individual rat IDs and days as subdirectories.
