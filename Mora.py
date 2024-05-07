@@ -25,7 +25,6 @@ import sys
 from scipy.io import wavfile
 import data_processing.sleep_functions as sleep
 import os
-from pycaret.classification import *
 
 pg.setConfigOption("background", "w")
 pg.setConfigOption("foreground", "k")
