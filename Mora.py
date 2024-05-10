@@ -699,7 +699,7 @@ class Window(QWidget):
 
         predictions = self.model.predict(features)
         decoded_predictions = self.label_encoder.inverse_transform(predictions)
-        self.score = decoded_predictions
+        self.scores = decoded_predictions
 
         # temporarily deprecating modify_scores until we figure out the best way to implement it
         # self.scores = sleep.modify_scores(decoded_predictions)
