@@ -5,7 +5,7 @@
 #   2. 'Non' and 'Unscored' still present in the 'score' columns for some rats - remove
 
 import datetime
-import process_training_data as process_data
+from train_test_split import train_test_split
 import save_model
 import train_model
 from sklearn.metrics import f1_score
@@ -34,7 +34,7 @@ group_col = "ID_day"
 time_series_idx = "epoch"
 train_size = 0.8
 
-train_set, test_set = process_data.train_test_split(
+train_set, test_set = train_test_split(
     df=df,
     feature_cols=feature_cols,
     train_size=train_size,
