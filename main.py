@@ -5,8 +5,6 @@ import sys
 import os
 import windows
 
-START_PATH = os.path.dirname(os.path.realpath(__file__))
-
 
 class MainWindow(QMainWindow):
 

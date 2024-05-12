@@ -3,11 +3,14 @@ from PyQt5.QtWidgets import *
 import pyqtgraph as pg
 from PyQt5.QtCore import *
 import numpy as np
+from funcs import Buttons
 
 
 class Display(QWidget):
     def __init__(self):
         super(QWidget, self).__init__()
+
+        self.Buttons = Buttons()
 
         # epoch
         self.epoch = 0
@@ -23,6 +26,10 @@ class Display(QWidget):
 
         # create plot objects in window
         self.window_size = QComboBox(self)
+
+        # Buttons
+        self.load_data_button = QPushButton("Load Data", self)
+        self.load_data_button.clicked.connect(self.Buttons.load_data)
 
         # EEG plot
         self.eeg_plot = pg.PlotWidget(self, title="EEG")

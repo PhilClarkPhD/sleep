@@ -5,6 +5,8 @@
 #   2. 'Non' and 'Unscored' still present in the 'score' columns for some rats - remove
 
 import datetime
+import os.path
+
 from train_test_split import train_test_split
 import save_model
 import train_model
@@ -133,17 +135,23 @@ metadata = {
 }
 
 # Save model and metadata
-SAVE_DIR = "/Users/phil/philclarkphd/sleep/model_artifacts"
+artifacts_path = "/Users/phil/philclarkphd/sleep/model_artifacts"
+
+if not os.path.isdir(os.path.join(artifacts_path, model_name)):
+    os.mkdir(os.path.join(artifacts_path, model_name))
+
+SAVE_DIR = os.path.join(artifacts_path, model_name)
+
 save_model.save_model_artifacts(
     save_dir=SAVE_DIR,
     model=final_model,
     metadata=metadata,
     encoder=label_encoder,
-    file_name=f"{model_name}_artifacts",
+    file_name=f"{model_name}_{model_version}",
 )
 
 # Save test data and predicted values for analysis
-save_path = SAVE_DIR + f"/test_data_{model_name}.csv"
+save_path = SAVE_DIR + f"/{model_name}_{model_version}_test_result.csv"
 df_test = test_set[feature_cols]
 df_test["y"] = test_set[target_col]
 df_test["y_pred"] = y_test_pred

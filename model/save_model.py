@@ -1,12 +1,12 @@
 import os
 import joblib
-import numpy as np
+from xgboost import XGBClassifier
 from sklearn.preprocessing import LabelEncoder
 
 
 def save_model_artifacts(
     save_dir: str,
-    model,
+    model: XGBClassifier,
     metadata: dict,
     encoder: LabelEncoder,
     file_name: str,
@@ -15,7 +15,7 @@ def save_model_artifacts(
 
     Args:
         save_dir (str): Path to the directory where you want the files saved.
-        model (XGBoost model): The fit model
+        model (XGBClassifier): The fit model
         metadata (dict[str,list]): Dictionary containing the metadata for the model.
         encoder (LabelEncoder): sklearn LabelEncoder used when training the model.
         file_name (str): The name of the file that will be saved.

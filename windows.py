@@ -4,7 +4,10 @@ import pyqtgraph as pg
 from PyQt5.QtCore import *
 import sys
 import os
+
+import funcs
 import utils
+from funcs import Buttons
 
 
 class Tab(QWidget):
@@ -28,9 +31,7 @@ class Tab(QWidget):
 
         # # #  TOP LAYOUT # # #
         # load data button
-        load_data_btn = QPushButton("Load Data", self)
-        # load_data_btn.clicked.connect(self.load_data)
-        button_layout.addWidget(load_data_btn, 0, 0)
+        button_layout.addWidget(self.Display.load_data_button, 0, 0)
 
         # load scores button
         load_scores_btn = QPushButton("Load Scores", self)
