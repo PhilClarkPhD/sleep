@@ -151,7 +151,7 @@ save_model.save_model_artifacts(
 )
 
 # Save test data and predicted values for analysis
-save_path = SAVE_DIR + f"/{model_name}_{model_version}_test_result.csv"
+save_path = SAVE_DIR + f"/{model_name}_{model_version}_test_data.csv"
 df_test = test_set[feature_cols]
 df_test["y"] = test_set[target_col]
 df_test["y_pred"] = y_test_pred
