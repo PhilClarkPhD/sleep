@@ -3,13 +3,15 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import sys
 import os
-import windows
+from tabs import Tabs
 
 
 class MainWindow(QMainWindow):
 
-    def __init__(self, *args, **kwargs):
-        super(MainWindow, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super().__init__()
+
+        self.Tabs = Tabs()
 
         central_widget = QWidget()  # Create a central widget
         self.setCentralWidget(
@@ -19,8 +21,9 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(central_widget)  # Create a layout for the central widget
 
         tabs = QTabWidget()
-        tabs.addTab(windows.Tab().home(), "home")
-        tabs.addTab(windows.Tab().model(), "Model")
+        tabs.addTab(self.Tabs.test_tab(), "test")
+        # tabs.addTab(Tabs.home(), "home")
+        # tabs.addTab(Tabs.model(), "Model")
 
         layout.addWidget(tabs)  # Add the tabs widget to the layout
 
