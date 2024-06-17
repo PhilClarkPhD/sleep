@@ -85,6 +85,9 @@ class Funcs(QWidget):
         else:
             raise ValueError("Not a valid input")
 
+    def calculate_timestamp_from_epoch(self) -> pd.Series:
+        pass
+
     def export_scores(self) -> None:
         name = str(self.name_file())
         path = QFileDialog.getExistingDirectory(
@@ -97,6 +100,7 @@ class Funcs(QWidget):
             [self.Data.epoch_dict.keys(), self.Data.epoch_dict.values()]
         ).T
         score_export.columns = ["epoch", "score"]
+        score_export["timestamp"] = self.calculate_timestamp_from_epoch()
         score_export.to_csv(file_path + ".csv", sep=",", index=False)
 
     def breakdown_scores(self, epoch: str) -> None:
@@ -221,7 +225,7 @@ class Funcs(QWidget):
             )
 
             self.Data.samplerate, data = wavfile.read(path)
-            self.Data.array_size = self.Data.samplerate * 10
+            self.Data.array_size = self.Data.samplerate * self.Data.seconds_per_epoch
             self.Data.df = pd.DataFrame(data=data, columns=["eeg", "emg"])
 
             # Compute power spectrum, relative power metrics

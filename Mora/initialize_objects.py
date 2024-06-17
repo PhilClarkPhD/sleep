@@ -57,8 +57,9 @@ class Data(QWidget):
             columns=["delta_rel", "theta_rel", "theta_over_delta"]
         )
 
-        self.samplerate = np.NaN
-        self.array_size = np.NaN
+        self.samplerate = np.NaN  # Number of samples per second
+        self.seconds_per_epoch = 10
+        self.array_size = np.NaN  # Number of samples per epoch
 
         self.window_start = np.NaN
         self.window_end = np.NaN
