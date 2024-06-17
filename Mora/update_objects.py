@@ -8,6 +8,7 @@ from scipy.io import wavfile
 from data_processing import sleep_functions as sleep
 import pyqtgraph as pg
 from PyQt5.QtGui import QKeyEvent
+from datetime import datetime, timedelta
 
 
 class Funcs(QWidget):
@@ -199,6 +200,15 @@ class Funcs(QWidget):
                 self, "Dialog Canceled", "No date and time selected."
             )
 
+    def get_xticks_as_datetime(self, xlabels):
+        xlabels = {
+            key: (timedelta(seconds=value) + self.General.timestamp).strftime(
+                self.General.TIMESTAMP_FORMAT
+            )
+            for key, value in xlabels.items()
+        }
+        return xlabels
+
     def load_data(self) -> None:
         path, ext = QFileDialog.getOpenFileName(
             self, "Open .wav file", self.General.current_path, "(*.wav)"
@@ -230,9 +240,9 @@ class Funcs(QWidget):
             self.Data.delta_vals = self.Data.metrics[["delta_rel"]].values
             self.Data.theta_vals = self.Data.metrics[["theta_rel"]].values
 
+            self.get_timestamp()
             self.update_plots()
             self.plot_hypnogram()
-            self.get_timestamp()
 
     def plot_shading(self, i: int) -> None:
         begin = self.x_axis[0] + i * self.Data.array_size
@@ -341,6 +351,10 @@ class Funcs(QWidget):
 
     def update_plots(self):
         x_labels = self.calculate_eeg_axes()
+
+        # Hack to change x_labels to timestamp
+        if self.General.timestamp:
+            x_labels = self.get_xticks_as_datetime(x_labels)
 
         # eeg plot
         self.Home.eeg_plot.plot(
