@@ -15,7 +15,8 @@ class General(QWidget):
 
         # Timestamp
         self.timestamp = None
-        self.TIMESTAMP_FORMAT = "%Y-%m-%d\n%H:%M:%S"
+        self.TIMESTAMP_FORMAT_PLOTTING = "%Y-%m-%d\n%H:%M:%S"
+        self.TIMESTAMP_FORMAT_EXPORTING = "%Y-%m-%d %H:%M:%S"
 
 
 class Timestamp_Dialog(QDialog):

@@ -62,7 +62,7 @@ class Funcs(QWidget):
                 columns=lambda x: x.strip(), inplace=True
             )  # remove whitespace
 
-            if score_import.shape[1] > 2:
+            if "Epoch #" in score_import.columns:
                 # subtract 1 to force epoch start at 0 when loading scores from Sirenia
                 self.Data.epoch_dict = dict(
                     zip(
@@ -85,8 +85,16 @@ class Funcs(QWidget):
         else:
             raise ValueError("Not a valid input")
 
-    def calculate_timestamp_from_epoch(self) -> pd.Series:
-        pass
+    def calculate_timestamp_from_epoch(self) -> list:
+        seconds_to_add = self.Data.epoch_list * self.Data.seconds_per_epoch
+
+        timestamp_series = [
+            (self.General.timestamp + timedelta(seconds=seconds)).strftime(
+                self.General.TIMESTAMP_FORMAT_EXPORTING
+            )
+            for seconds in seconds_to_add
+        ]
+        return timestamp_series
 
     def export_scores(self) -> None:
         name = str(self.name_file())
@@ -100,7 +108,10 @@ class Funcs(QWidget):
             [self.Data.epoch_dict.keys(), self.Data.epoch_dict.values()]
         ).T
         score_export.columns = ["epoch", "score"]
-        score_export["timestamp"] = self.calculate_timestamp_from_epoch()
+
+        if self.General.timestamp:
+            score_export["timestamp"] = self.calculate_timestamp_from_epoch()
+
         score_export.to_csv(file_path + ".csv", sep=",", index=False)
 
     def breakdown_scores(self, epoch: str) -> None:
@@ -207,7 +218,7 @@ class Funcs(QWidget):
     def get_xticks_as_datetime(self, xlabels):
         xlabels = {
             key: (timedelta(seconds=value) + self.General.timestamp).strftime(
-                self.General.TIMESTAMP_FORMAT
+                self.General.TIMESTAMP_FORMAT_PLOTTING
             )
             for key, value in xlabels.items()
         }
