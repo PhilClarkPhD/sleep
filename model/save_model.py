@@ -21,7 +21,7 @@ def save_model_artifacts(
         file_name (str): The name of the file that will be saved.
 
     Returns:
-        None
+        .pkl file containing model, metadata, and encoder in a tuple
     """
 
     # Check if path is valid

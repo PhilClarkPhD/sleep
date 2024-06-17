@@ -87,8 +87,8 @@ train_score = f1_score(y_test, y_test_pred, average="weighted")
 # Train final model
 X = df[feature_cols]
 y = df[target_col]
-model_version = "1.0"
-model_name = f"XGBoost_{model_version}"
+model_version = "1.0.0"
+model_name = "XGBoost"
 
 final_model, y_pred, time_to_fit, label_encoder = train_model.train_model(
     X, y, best_params
@@ -110,7 +110,8 @@ n_test_rows = X_test.shape[0]
 metadata = {
     "model_name": model_name,
     "model_version": model_version,
-    "current_path": current_time,
+    "model_id": model_name + "_" + model_version,
+    "timestamp": current_time,
     "feature_path": feature_path,
     "feature_cols": feature_cols,
     "target_col": target_col,
