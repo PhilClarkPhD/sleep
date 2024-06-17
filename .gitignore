@@ -8,6 +8,9 @@ __*
 .DS*
 .idea/
 
+# jupyter notebooks
+*.ipynb_checkpoints*
+
 # data
 sleep_data/
 model_artifacts/
