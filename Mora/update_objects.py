@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
-from initialize_objects import General, Home, Model, Data
+from initialize_objects import General, Home, Model, Data, Timestamp_Dialog
 import os
 import pandas as pd
 import numpy as np
@@ -18,6 +18,7 @@ class Funcs(QWidget):
         self.Home = Home()
         self.Model = Model()
         self.Data = Data()
+        self.Timestamp_Dialog = Timestamp_Dialog()
 
         # brushes for coloring scoring windows
         self.rem = pg.mkBrush(pg.intColor(90, alpha=50))
@@ -189,6 +190,15 @@ class Funcs(QWidget):
         except KeyError:
             return self.unscored
 
+    def get_timestamp(self) -> None:
+        dialog = self.Timestamp_Dialog
+        if dialog.exec_() == QDialog.Accepted:
+            self.General.timestamp = dialog.getDateTime().toPyDateTime()
+        else:
+            QMessageBox.information(
+                self, "Dialog Canceled", "No date and time selected."
+            )
+
     def load_data(self) -> None:
         path, ext = QFileDialog.getOpenFileName(
             self, "Open .wav file", self.General.current_path, "(*.wav)"
@@ -222,6 +232,7 @@ class Funcs(QWidget):
 
             self.update_plots()
             self.plot_hypnogram()
+            self.get_timestamp()
 
     def plot_shading(self, i: int) -> None:
         begin = self.x_axis[0] + i * self.Data.array_size

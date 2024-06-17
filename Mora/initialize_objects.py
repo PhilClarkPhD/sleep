@@ -1,4 +1,5 @@
 from PyQt5.QtWidgets import *
+from PyQt5.QtCore import QDateTime
 import pyqtgraph as pg
 import os
 import numpy as np
@@ -11,6 +12,35 @@ class General(QWidget):
 
         # PATH
         self.current_path = os.path.dirname(os.path.realpath(__file__))
+
+        # Timestamp
+        self.timestamp = None
+
+
+class Timestamp_Dialog(QDialog):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Start Date and Time of recording (yyyy-MM-dd HH:mm:ss)")
+        self.setGeometry(100, 100, 500, 100)
+
+        layout = QVBoxLayout()
+        self.dateTimeEdit = QDateTimeEdit(self)
+        self.dateTimeEdit.setDateTime(QDateTime.currentDateTime())
+        self.dateTimeEdit.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
+        layout.addWidget(self.dateTimeEdit)
+
+        self.buttonBox = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self
+        )
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+        layout.addWidget(self.buttonBox)
+
+        self.setLayout(layout)
+
+    def getDateTime(self):
+        return self.dateTimeEdit.dateTime()
 
 
 class Data(QWidget):
