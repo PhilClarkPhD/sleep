@@ -65,16 +65,15 @@ def get_file_paths(base_path: str) -> defaultdict:
     for path in wav_file_paths:
         rat_id = str(os.path.basename(os.path.dirname(path)))
         day = str.upper(
-            path.split("_")[2].split(".")[0]
+            os.path.basename(path).split("_")[1].split(".")[0]
         )  # split based on file naming convention (e.g. /171N_BL.wav)
         path_dict[rat_id][day][".wav"] = path
 
     # populate dict with .txt filepaths
     for path in txt_file_paths:
         rat_id = str(os.path.basename(os.path.dirname(path)))
-        day = str.upper(
-            path.split("_")[2]
-        )  # split based on file naming convention (e.g. /171N_BL_scores.txt)
+        day = str.upper(os.path.basename(path).split("_")[1])
+        # split based on file naming convention (e.g. /171N_BL_scores.txt)
         path_dict[rat_id][day][".txt"] = path
 
     return path_dict
@@ -97,7 +96,7 @@ def load_scores(path: str) -> pd.DataFrame:
         columns=lambda x: x.strip(), inplace=True
     )  # remove whitespace from Sirenia's column names
 
-    if df_score.shape[1] > 2:
+    if "Epoch #" in df_score.columns:
         # subtract 1 to force epoch start at 0 when loading scores from Sirenia
         df_score.rename(columns={"Epoch #": "epoch", "Score": "score"}, inplace=True)
         df_score["epoch"] = df_score["epoch"] - 1
@@ -124,7 +123,9 @@ def calculate_features(file_paths: defaultdict) -> pd.DataFrame:
     df = pd.DataFrame()
 
     for rat_id in file_paths:
+        print(rat_id)
         for day in file_paths[rat_id]:
+            print(day)
             data_path = file_paths[rat_id][day][".wav"]
             score_path = file_paths[rat_id][day][".txt"]
 
@@ -147,6 +148,7 @@ def calculate_features(file_paths: defaultdict) -> pd.DataFrame:
 
             # add this data to the existing df
             df = pd.concat([df, df_combined])
+    print()
 
     return df
 
