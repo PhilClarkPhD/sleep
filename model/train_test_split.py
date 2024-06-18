@@ -3,11 +3,9 @@ import pandas as pd
 
 def train_test_split(
     df: pd.DataFrame,
-    feature_cols: list,
     train_size: float = 0.8,
     time_series_idx: str = "epoch",
     group_col: str = "ID_day",
-    target_col: str = "score",
 ) -> tuple:
     """
     Splits data into train and test sets. Splitting is done equally across all values in the group_col.
