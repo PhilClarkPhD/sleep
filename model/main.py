@@ -1,5 +1,5 @@
 # TODO:
-# Find better way to save the test data and predicted scores
+# Find better way to save the test data and predicted scores (move function into save_model?)
 # Two issues to fix in future QA/feature engineering workflow:
 #   1. Epochs did not all start at 0 (some started at 1)
 #   2. 'Non' and 'Unscored' still present in the 'score' columns for some rats - remove
@@ -13,11 +13,17 @@ import train_model
 from sklearn.metrics import f1_score
 import pandas as pd
 
-# Set feature path
-feature_path = "/Users/phil/philclarkphd/sleep/sleep_data/df_features_041924.csv"
+# artifact path for saving model and metadata
+artifacts_path = "/Users/phil/philclarkphd/sleep/model_artifacts"
+# feature path for loading feature table
+feature_path = "/Users/phil/philclarkphd/sleep/sleep_data/feature_store/features_2024-06-17_23-43-24.csv"
+
 
 # Load Data
 df = pd.read_csv(feature_path)
+
+# Drop unscored epochs
+df = df.loc[df["score"] != "Unscored"]
 
 # Declare inputs for train/test split
 feature_cols = [
@@ -38,11 +44,9 @@ train_size = 0.8
 
 train_set, test_set = train_test_split(
     df=df,
-    feature_cols=feature_cols,
     train_size=train_size,
     time_series_idx=time_series_idx,
     group_col=group_col,
-    target_col=target_col,
 )
 
 # Split into train and test
@@ -65,7 +69,7 @@ search_space = {
 }
 random_state = 42
 cv_folds = 5
-n_iter = 10
+n_iter = 50
 eval_metric = "f1_weighted"  # Use this on imbalanced multiclass data
 best_params, search_duration = train_model.find_best_params(
     X_train=X_train,
@@ -87,8 +91,9 @@ train_score = f1_score(y_test, y_test_pred, average="weighted")
 # Train final model
 X = df[feature_cols]
 y = df[target_col]
-model_version = "1.0.0"
+model_version = "1.1.0"
 model_name = "XGBoost"
+model_id = model_name + "_" + model_version
 
 final_model, y_pred, time_to_fit, label_encoder = train_model.train_model(
     X, y, best_params
@@ -99,8 +104,7 @@ current_time = datetime.datetime.today()
 
 # Make any notes
 notes = """
-Initial model version. Kept in most/all features to maximize predictive accuracy, irrespective of feature
-importance.Did not compare different model architectures.
+First model w/ Sophie's data. Dropping "Unscored" epochs, as we agreed that would be the designation for noisy epochs.
 """
 
 # Populate metadata
@@ -110,7 +114,7 @@ n_test_rows = X_test.shape[0]
 metadata = {
     "model_name": model_name,
     "model_version": model_version,
-    "model_id": model_name + "_" + model_version,
+    "model_id": model_id,
     "timestamp": current_time,
     "feature_path": feature_path,
     "feature_cols": feature_cols,
@@ -135,24 +139,22 @@ metadata = {
     "notes": notes,
 }
 
-# Save model and metadata
-artifacts_path = "/Users/phil/philclarkphd/sleep/model_artifacts"
 
 if not os.path.isdir(os.path.join(artifacts_path, model_name)):
     os.mkdir(os.path.join(artifacts_path, model_name))
 
-SAVE_DIR = os.path.join(artifacts_path, model_name)
+SAVE_DIR = os.path.join(artifacts_path, model_id)
 
 save_model.save_model_artifacts(
     save_dir=SAVE_DIR,
     model=final_model,
     metadata=metadata,
     encoder=label_encoder,
-    file_name=f"{model_name}_{model_version}",
+    file_name=model_id,
 )
 
 # Save test data and predicted values for analysis
-save_path = SAVE_DIR + f"/{model_name}_{model_version}_test_data.csv"
+save_path = SAVE_DIR + "/" + f"{model_id}_test_data.csv"
 df_test = test_set[feature_cols]
 df_test["y"] = test_set[target_col]
 df_test["y_pred"] = y_test_pred
