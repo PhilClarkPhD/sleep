@@ -1,7 +1,7 @@
 import create_features as cf
 from datetime import datetime
 
-BASE_PATH = "/Users/phil/philclarkphd/sleep/sleep_data/training_data/sophie"
+BASE_PATH = "/Users/phil/philclarkphd/sleep/sleep_data/training_data/sophie/subset_1"
 FEATURE_STORE_DIR = "/Users/phil/philclarkphd/sleep/sleep_data/feature_store"
 
 current_time = datetime.strftime(datetime.today(), "%Y-%m-%d_%H-%M-%S")

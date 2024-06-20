@@ -1,25 +1,25 @@
 """
-This module ingests eeg/emg data and scores and outputs the feature table needed for model development. It takes in
-.wav and .txt files containing the eeg/emg data and scores, respectively. The get_file_paths() function assumes a
-certain naming convention and directory structure of the files. In particular, the files should be named
-RAT_DAY_scores.txt or RAT_DAY.wav.
+This module ingests eeg/emg data, scores, and starting epochs, and outputs the feature table needed for model
+development. It takes in .wav and .txt files containing the eeg/emg data and scores/epochs. The  get_file_paths()
+function assumes a certain naming convention and directory structure of the files. In particular, the files should be
+named RAT_DAY_scores.txt, RAT_DAT_epoch.txt, and RAT_DAY.wav.
 
 Example directory structure for my base_path which is /Users/phil/philclarkphd/sleep/sleep_data:
 
 ├── 171N
-│       ├── 171N_AD1.wav
-│       ├── 171N_AD6.wav
 │       ├── 171N_BL.wav
-│       ├── 171N_ad1_scores.txt
-│       ├── 171N_ad6_scores.txt
-│       └── 171N_bl_scores.txt
+│       ├── 171N_BL_scores.txt
+│       ├── 171N_BL_epoch.txt
 ├── 181N
 │       ├── 181N_AD2.wav
 │       ├── 181N_AD8.wav
 │       ├── 181N_BL1.wav
 │       ├── 181N_ad2_scores.txt
+│       ├── 181N_ad2_epoch.txt
 │       ├── 181N_ad8_scores.txt
-│       └── 181N_bl1_scores.txt
+│       ├── 181N_ad8_epoch.txt
+│       ├── 181N_BL1_scores.txt
+│       └── 181N_BL1_epoch.txt
 
 """
 
@@ -71,10 +71,17 @@ def get_file_paths(base_path: str) -> defaultdict:
 
     # populate dict with .txt filepaths
     for path in txt_file_paths:
-        rat_id = str(os.path.basename(os.path.dirname(path)))
-        day = str.upper(os.path.basename(path).split("_")[1])
-        # split based on file naming convention (e.g. /171N_BL_scores.txt)
-        path_dict[rat_id][day][".txt"] = path
+        # get starting epoch
+        if "epoch" in str(os.path.basename(path)):
+            rat_id = str(os.path.basename(os.path.dirname(path)))
+            # split based on file naming convention (e.g. /171N_BL_epoch.txt)
+            day = str.upper(os.path.basename(path).split("_")[1])
+            path_dict[rat_id][day]["epoch"] = path
+        else:
+            rat_id = str(os.path.basename(os.path.dirname(path)))
+            # split based on file naming convention (e.g. /171N_BL_scores.txt)
+            day = str.upper(os.path.basename(path).split("_")[1])
+            path_dict[rat_id][day][".txt"] = path
 
     return path_dict
 
@@ -128,13 +135,18 @@ def calculate_features(file_paths: defaultdict) -> pd.DataFrame:
             print(day)
             data_path = file_paths[rat_id][day][".wav"]
             score_path = file_paths[rat_id][day][".txt"]
+            epoch_path = file_paths[rat_id][day]["epoch"]
+
+            # Read starting epoch
+            with open(epoch_path, "r") as file:
+                start_epoch = int(file.readline().strip())
 
             # read eeg and emg data from .wav file
             samplerate, data = wavfile.read(data_path)
             df_data = pd.DataFrame(data=data, columns=["eeg", "emg"])
 
             # make df_features. Add in columns for ID, day, and epoch
-            df_features = sleep.generate_features(data=df_data)
+            df_features = sleep.generate_features(data=df_data, start_epoch=start_epoch)
             df_features["ID"] = rat_id
             df_features["day"] = day
             df_features["ID_day"] = rat_id + "_" + day

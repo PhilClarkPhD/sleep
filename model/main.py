@@ -16,7 +16,7 @@ import pandas as pd
 # artifact path for saving model and metadata
 artifacts_path = "/Users/phil/philclarkphd/sleep/model_artifacts"
 # feature path for loading feature table
-feature_path = "/Users/phil/philclarkphd/sleep/sleep_data/feature_store/features_2024-06-17_23-43-24.csv"
+feature_path = "/Users/phil/philclarkphd/sleep/sleep_data/feature_store/features_2024-06-19_14-52-26.csv"
 
 
 # Load Data
@@ -24,6 +24,7 @@ df = pd.read_csv(feature_path)
 
 # Drop unscored epochs
 df = df.loc[df["score"] != "Unscored"]
+print(df.shape)
 
 # Declare inputs for train/test split
 feature_cols = [
