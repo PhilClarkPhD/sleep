@@ -11,8 +11,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-def compute_power(data, window: int = 10, samplerate: int = 1000, freq_limit: int = 50) -> tuple[dict[int, float],
-                                                                                                 dict[int, float]]:
+def compute_power(
+    data, window: int = 10, samplerate: int = 1000, freq_limit: int = 50
+) -> tuple[dict[int, float], dict[int, float]]:
     """
     Computes a power spectrum from raw eeg/emg data.
 
@@ -41,18 +42,18 @@ def compute_power(data, window: int = 10, samplerate: int = 1000, freq_limit: in
         end = start + array_len
 
         # Select EEG and EMG data based on start and stop points
-        EEG = data['eeg'][start:end]
-        EMG = data['emg'][start:end]
+        EEG = data["eeg"][start:end]
+        EMG = data["emg"][start:end]
 
         # Compute Fourier Transform
         eeg_xf = rfft(np.array(EEG) - np.array(EEG).mean())
         emg_xf = rfft(np.array(EMG) - np.array(EMG).mean())
 
         # Compute power spectrum
-        eeg_Sxx = (2 * dt ** 2 / window * (eeg_xf * eeg_xf.conj())).real
+        eeg_Sxx = (2 * dt**2 / window * (eeg_xf * eeg_xf.conj())).real
         eeg_Sxx = eeg_Sxx[0:freq_limit]
 
-        emg_Sxx = (2 * dt ** 2 / window * (emg_xf * emg_xf.conj())).real
+        emg_Sxx = (2 * dt**2 / window * (emg_xf * emg_xf.conj())).real
         emg_Sxx = emg_Sxx[0:freq_limit]
 
         eeg_power[epoch] = eeg_Sxx
@@ -64,8 +65,12 @@ def compute_power(data, window: int = 10, samplerate: int = 1000, freq_limit: in
 
 
 # Smooth Sxx function
-def smooth_signal(eeg_power: dict[int, float], emg_power: dict[int, float], window_len: int = 4,
-                  smooth_type: str = 'flat') -> tuple[dict[int, float], dict[int, float]]:
+def smooth_signal(
+    eeg_power: dict[int, float],
+    emg_power: dict[int, float],
+    window_len: int = 4,
+    smooth_type: str = "flat",
+) -> tuple[dict[int, float], dict[int, float]]:
     """
     Smooths the power spectrum outputted by the compute_power function using a moving window.
 
@@ -85,7 +90,7 @@ def smooth_signal(eeg_power: dict[int, float], emg_power: dict[int, float], wind
     smoothed_emg = {}
 
     if window_len % 2 != 0:
-        raise ValueError('window length must be an even integer')
+        raise ValueError("window length must be an even integer")
 
     for epoch in eeg_power:
         x_eeg = eeg_power[epoch]
@@ -100,28 +105,40 @@ def smooth_signal(eeg_power: dict[int, float], emg_power: dict[int, float], wind
         if window_len < 3:
             return x_eeg, x_emg
 
-        if smooth_type not in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-            raise (ValueError, "Smooth_type must be one of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+        if smooth_type not in ["flat", "hanning", "hamming", "bartlett", "blackman"]:
+            raise (
+                ValueError,
+                "Smooth_type must be one of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'",
+            )
 
-        s_eeg = np.r_[x_eeg[window_len - 1:0:-1], x_eeg, x_eeg[-2:-window_len - 1:-1]]
-        s_emg = np.r_[x_emg[window_len - 1:0:-1], x_emg, x_emg[-2:-window_len - 1:-1]]
+        s_eeg = np.r_[
+            x_eeg[window_len - 1 : 0 : -1], x_eeg, x_eeg[-2 : -window_len - 1 : -1]
+        ]
+        s_emg = np.r_[
+            x_emg[window_len - 1 : 0 : -1], x_emg, x_emg[-2 : -window_len - 1 : -1]
+        ]
 
-        if smooth_type == 'flat':  # Moving average
-            w = np.ones(window_len, 'd')
+        if smooth_type == "flat":  # Moving average
+            w = np.ones(window_len, "d")
         else:
-            w = eval('np.' + smooth_type + '(window_len)')
+            w = eval("np." + smooth_type + "(window_len)")
 
-        y_eeg = np.convolve(w / w.sum(), s_eeg, mode='valid')
-        y_emg = np.convolve(w / w.sum(), s_emg, mode='valid')
+        y_eeg = np.convolve(w / w.sum(), s_eeg, mode="valid")
+        y_emg = np.convolve(w / w.sum(), s_emg, mode="valid")
 
-        smoothed_eeg[epoch] = y_eeg[(int(window_len / 2) - 1):-int(window_len / 2)]
-        smoothed_emg[epoch] = y_emg[(int(window_len / 2) - 1):-int(window_len / 2)]
+        smoothed_eeg[epoch] = y_eeg[(int(window_len / 2) - 1) : -int(window_len / 2)]
+        smoothed_emg[epoch] = y_emg[(int(window_len / 2) - 1) : -int(window_len / 2)]
     return smoothed_eeg, smoothed_emg
 
 
-def compute_relative_power(smoothed_eeg: dict[int, float], freq_res: float = 0.1, delta_lower: float = 0.5,
-                           delta_upper: float = 4, theta_lower: float = 5.5,
-                           theta_upper: float = 8.5) -> pd.DataFrame:
+def compute_relative_power(
+    smoothed_eeg: dict[int, float],
+    freq_res: float = 0.1,
+    delta_lower: float = 0.5,
+    delta_upper: float = 4,
+    theta_lower: float = 5.5,
+    theta_upper: float = 8.5,
+) -> pd.DataFrame:
     """
     Computes relative power for delta and theta bands.
 
@@ -141,8 +158,12 @@ def compute_relative_power(smoothed_eeg: dict[int, float], freq_res: float = 0.1
         theta_over_delta = ratio of theta power to delta power for epoch x
     """
     rel_power = {}
-    theta_length = ((theta_upper - theta_lower) / freq_res) + 1 # float equal to length of theta power spectrum array
-    delta_length = ((delta_upper - delta_lower) / freq_res) + 1 # float equal to length of delta power spectrum array
+    theta_length = (
+        (theta_upper - theta_lower) / freq_res
+    ) + 1  # float equal to length of theta power spectrum array
+    delta_length = (
+        (delta_upper - delta_lower) / freq_res
+    ) + 1  # float equal to length of delta power spectrum array
 
     for epoch in smoothed_eeg:
         x = smoothed_eeg[epoch]
@@ -153,9 +174,10 @@ def compute_relative_power(smoothed_eeg: dict[int, float], freq_res: float = 0.1
         idx_delta = np.logical_and(power_axis >= delta_lower, power_axis <= delta_upper)
         idx_theta = np.logical_and(power_axis >= theta_lower, power_axis <= theta_upper)
 
-
-        if (len((np.where(idx_theta))[0])) >= theta_length and (len((np.where(idx_delta))[0])) >= delta_length:
-            #Checks if length of delta and theta spectra are sufficient for computing relative power
+        if (len((np.where(idx_theta))[0])) >= theta_length and (
+            len((np.where(idx_delta))[0])
+        ) >= delta_length:
+            # Checks if length of delta and theta spectra are sufficient for computing relative power
 
             # compute total power
             total_power = simps(x, dx=freq_res)
@@ -175,16 +197,17 @@ def compute_relative_power(smoothed_eeg: dict[int, float], freq_res: float = 0.1
             rel_power[epoch] = rel_power_list
 
         else:
-            rel_power[epoch] = [0,0,0]
+            rel_power[epoch] = [0, 0, 0]
 
     rel_power = pd.DataFrame.from_dict(rel_power).T
-    rel_power.columns = ['delta_rel', 'theta_rel', 'theta_over_delta']
+    rel_power.columns = ["delta_rel", "theta_rel", "theta_over_delta"]
 
     return rel_power
 
 
-def compute_signal_features(data: pd.DataFrame, window: int = 10, samplerate: int = 1000, start_epoch: int = 9) \
-        -> pd.DataFrame:
+def compute_signal_features(
+    data: pd.DataFrame, window: int = 10, samplerate: int = 1000, start_epoch: int = 9
+) -> pd.DataFrame:
     """
     Computes features from EEG and EMG data for ML model
 
@@ -214,12 +237,34 @@ def compute_signal_features(data: pd.DataFrame, window: int = 10, samplerate: in
     EMG_events = {}
 
     # Compute baseline EEG/EMG amplitudes and EMG event threshold
-    base_std_EEG = np.std(data['eeg'][(start_epoch * array_len):((start_epoch * array_len) + array_len)])
-    base_amp_EEG = np.mean(np.absolute(data['eeg'][(start_epoch * array_len):((start_epoch * array_len) + array_len)]))
-    base_ss_EEG = np.sum(np.square(data['eeg'][(start_epoch * array_len):((start_epoch * array_len) + array_len)]))
+    base_std_EEG = np.std(
+        data["eeg"][(start_epoch * array_len) : ((start_epoch * array_len) + array_len)]
+    )
+    base_amp_EEG = np.mean(
+        np.absolute(
+            data["eeg"][
+                (start_epoch * array_len) : ((start_epoch * array_len) + array_len)
+            ]
+        )
+    )
+    base_ss_EEG = np.sum(
+        np.square(
+            data["eeg"][
+                (start_epoch * array_len) : ((start_epoch * array_len) + array_len)
+            ]
+        )
+    )
 
-    base_std_EMG = np.std(data['emg'][(start_epoch * array_len):((start_epoch * array_len) + array_len)])
-    base_ss_EMG = np.sum(np.square(data['emg'][(start_epoch * array_len):((start_epoch * array_len) + array_len)]))
+    base_std_EMG = np.std(
+        data["emg"][(start_epoch * array_len) : ((start_epoch * array_len) + array_len)]
+    )
+    base_ss_EMG = np.sum(
+        np.square(
+            data["emg"][
+                (start_epoch * array_len) : ((start_epoch * array_len) + array_len)
+            ]
+        )
+    )
 
     event_threshold = 2 * base_std_EMG
 
@@ -229,8 +274,8 @@ def compute_signal_features(data: pd.DataFrame, window: int = 10, samplerate: in
         end = start + array_len
 
         # Select EEG and EMG data based on start and stop points
-        EEG = data['eeg'][start:end]
-        EMG = data['emg'][start:end]
+        EEG = data["eeg"][start:end]
+        EMG = data["emg"][start:end]
 
         # Calculate EEG_std, EMG_std, and EEG_amp, and add to dictionaries
         EEG_std[epoch] = np.std(EEG) / base_std_EEG
@@ -240,7 +285,7 @@ def compute_signal_features(data: pd.DataFrame, window: int = 10, samplerate: in
         EMG_ss[epoch] = np.sum(np.square(EMG)) / base_ss_EMG
         EMG_std[epoch] = np.std(EMG) / base_std_EMG
 
-        # Calculate EMG events above event_treshold
+        # Calculate EMG events above event_threshold
         event_array = EMG.loc[EMG > event_threshold]
 
         if not len(event_array) == 0:
@@ -261,7 +306,7 @@ def compute_signal_features(data: pd.DataFrame, window: int = 10, samplerate: in
         epoch += 1
 
     output = pd.DataFrame([EEG_std, EEG_ss, EEG_amp, EMG_std, EMG_ss, EMG_events]).T
-    output.columns = ['EEG_std', 'EEG_ss', 'EEG_amp', 'EMG_std', 'EMG_ss', 'EMG_events']
+    output.columns = ["EEG_std", "EEG_ss", "EEG_amp", "EMG_std", "EMG_ss", "EMG_events"]
 
     return output
 
@@ -291,18 +336,20 @@ def generate_features(data: pd.DataFrame, start_epoch: int = 9) -> pd.DataFrame:
     return metrics
 
 
-def plot_confusion_matrix(y: np.ndarray, y_predict: np.ndarray, label_list: list) -> np.ndarray:
+def plot_confusion_matrix(
+    y: np.ndarray, y_predict: np.ndarray, label_list: list
+) -> np.ndarray:
     """
     This function plots the confusion matrix
     """
 
     cm = confusion_matrix(y, y_predict)
     ax = plt.subplot()
-    sns.heatmap(cm, annot=True, ax=ax, fmt='.0f')  # annot=True to annotate cells
-    ax.set_xlabel('Predicted labels')
-    ax.set_ylabel('True labels')
-    ax.set_title('Confusion Matrix');
-    ax.xaxis.set_ticklabels(label_list);
+    sns.heatmap(cm, annot=True, ax=ax, fmt=".0f")  # annot=True to annotate cells
+    ax.set_xlabel("Predicted labels")
+    ax.set_ylabel("True labels")
+    ax.set_title("Confusion Matrix")
+    ax.xaxis.set_ticklabels(label_list)
     ax.yaxis.set_ticklabels(label_list)
     return cm
 
@@ -311,9 +358,11 @@ def modify_scores(pred: list) -> list:
     ls = []
     for idx, val in enumerate(pred):
         try:
-            if pred[idx - 1] == 'Wake' and val == 'REM':
-                ls.append('Wake')
-            elif (pred[idx - 2] == pred[idx - 1] == pred[idx + 1] == pred[idx + 2] != val) & (val != 'REM'):
+            if pred[idx - 1] == "Wake" and val == "REM":
+                ls.append("Wake")
+            elif (
+                pred[idx - 2] == pred[idx - 1] == pred[idx + 1] == pred[idx + 2] != val
+            ) & (val != "REM"):
                 ls.append(pred[idx - 1])
             else:
                 ls.append(val)
