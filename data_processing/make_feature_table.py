@@ -1,7 +1,7 @@
 import create_features as cf
 from datetime import datetime
 
-BASE_PATH = "/Users/phil/philclarkphd/sleep/sleep_data/training_data/sophie/subset_1"
+BASE_PATH = "/Users/phil/philclarkphd/sleep/sleep_data/training_data/V"
 FEATURE_STORE_DIR = "/Users/phil/philclarkphd/sleep/sleep_data/feature_store"
 
 current_time = datetime.strftime(datetime.today(), "%Y-%m-%d_%H-%M-%S")
@@ -12,6 +12,7 @@ SAVE_PATH = FEATURE_STORE_DIR + "/" + FILENAME
 df_features = cf.make_feature_df(BASE_PATH)
 print(df_features.shape)
 print(df_features.head())
+print(FILENAME)
 
 # Save feature table in feature store
 df_features.to_csv(SAVE_PATH)
