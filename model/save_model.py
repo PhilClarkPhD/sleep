@@ -57,16 +57,18 @@ def save_model_artifacts(
         )  # pkl and save the model/hyperparams
 
 
-def save_test_data(save_dir: os.path, test_data: pd.DataFrame, model_id: str) -> None:
+def save_test_data(
+    save_dir: os.path, test_data: pd.DataFrame, model_id: str
+) -> os.path:
     """
-
     Args:
         save_dir (os.path): directory for saving model artifacts
         test_data (pd.DataFrame): df w/ test data, including predicted scores
         model_id (str): model id
 
     Returns:
-        None
+        save_file_path(os.path): save path for the test data
     """
     save_file_path = os.path.join(save_dir, f"{model_id}_test_data.csv")
     test_data.to_csv(save_file_path)
+    return save_file_path

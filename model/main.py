@@ -151,7 +151,11 @@ save_model.save_model_artifacts(
     file_name=model_id,
 )
 
+# Make test df
 df_test = test_set[feature_cols]
-df_test["predicted"] = y_test_pred
+df_test["score"] = y_test
+df_test["predicted_score"] = y_test_pred
 
-save_model.save_test_data(save_dir=save_dir, test_data=df_test, model_id=model_id)
+test_data_save_path = save_model.save_test_data(
+    save_dir=save_dir, test_data=df_test, model_id=model_id
+)

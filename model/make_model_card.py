@@ -6,9 +6,9 @@ from evidently.metrics import *
 from evidently import ColumnMapping
 
 ARTIFACT_PATH = (
-    "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.1.0/XGBoost_1.1.0.pkl"
+    "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.1.1/XGBoost_1.1.1.pkl"
 )
-TEST_DATA_PATH = "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.1.0/XGBoost_1.1.0_test_data.csv"
+TEST_DATA_PATH = "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.1.1/XGBoost_1.1.1_test_data.csv"
 
 # Load artifacts
 model, metadata, encoder = joblib.load(ARTIFACT_PATH)
@@ -64,7 +64,7 @@ training_dataset = f"""
 model_evaluation = f"""
   # Model evaluation
 
-  * **Evaluation dataset**: A subset (20%) of the dataset.
+  * **Evaluation dataset**: A subset {(1-metadata["train_size"])*100}% of the dataset.
   * **Metrics**: Weighted f1 to deal with large class imbalance
   * **Class Representation**: There is a significant imbalance in the class sizes - REM is by far the smallest.
 """
@@ -73,17 +73,14 @@ model_evaluation = f"""
 model_summary = """
 # Model Summary
 
-* Similar to the previous model version (1.0), this model shows strong baseline performance, although it continues to 
-struggle with mis-identification of the minority class (REM). In addition, examining the model scores manually reveals that the model fails to take into account the time-dependent relationships between sleep stages (e.g. that REM cannot follow Wake). To resolve these issues I propose the following:
-   - **1.** Add a rules-based post-processing function to modify scores according to an agreed-upon heuristic.
-   - **2.** Perform feature engineering to improve the quality of input features in distinguishing the sleep classes from each other. In particular, the EMG-related features perform quite poorly right now.
+* This model uses the corrected train_test_split.py module. Same data as previous model verion (XGBoost_1.1.0)
 """
 
 ## Build Model Card ##
 column_mapping = ColumnMapping()
 
-column_mapping.target = "y"
-column_mapping.prediction = "y_pred"
+column_mapping.target = "score"
+column_mapping.prediction = "predicted_score"
 column_mapping.numerical_features = metadata["feature_cols"]
 column_mapping.task = "classification"
 
