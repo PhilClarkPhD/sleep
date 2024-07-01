@@ -133,20 +133,25 @@ def calculate_features(file_paths: defaultdict) -> pd.DataFrame:
         print(rat_id)
         for day in file_paths[rat_id]:
             print(day)
-            data_path = file_paths[rat_id][day][".wav"]
-            score_path = file_paths[rat_id][day][".txt"]
-            epoch_path = file_paths[rat_id][day]["epoch"]
-
-            # Read starting epoch
-            with open(epoch_path, "r") as file:
-                start_epoch = int(file.readline().strip())
+            data_path = file_paths[rat_id][day].get(".wav", None)
+            score_path = file_paths[rat_id][day].get(".txt", None)
+            epoch_path = file_paths[rat_id][day].get("epoch", None)
 
             # read eeg and emg data from .wav file
             samplerate, data = wavfile.read(data_path)
             df_data = pd.DataFrame(data=data, columns=["eeg", "emg"])
 
-            # make df_features. Add in columns for ID, day, and epoch
-            df_features = sleep.generate_features(data=df_data, start_epoch=start_epoch)
+            # Read starting epoch - if None do not pass the argument
+            if epoch_path is not None:
+                with open(epoch_path, "r") as file:
+                    start_epoch = int(file.readline().strip())
+
+                # make df_features. Add in columns for ID, day, and epoch
+            df_features = sleep.generate_features(
+                data=df_data,
+                **({"start_epoch": start_epoch} if epoch_path is not None else {})
+            )
+
             df_features["ID"] = rat_id
             df_features["day"] = day
             df_features["ID_day"] = rat_id + "_" + day
