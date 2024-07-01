@@ -10,6 +10,7 @@ SAVE_PATH = FEATURE_STORE_DIR + "/" + FILENAME
 
 # Call functions to make feature_df
 df_features = cf.make_feature_df(BASE_PATH)
+print(df_features.shape)
 print(df_features.head())
 
 # Save feature table in feature store

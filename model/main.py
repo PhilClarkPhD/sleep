@@ -16,15 +16,16 @@ import pandas as pd
 # artifact path for saving model and metadata
 artifacts_path = "/Users/phil/philclarkphd/sleep/model_artifacts"
 # feature path for loading feature table
-feature_path = "/Users/phil/philclarkphd/sleep/sleep_data/feature_store/features_2024-06-19_14-52-26.csv"
-
+feature_path = "/Users/phil/philclarkphd/sleep/sleep_data/feature_store/features_2024-06-30_20-51-19.csv"
+# model name / version
+model_version = "1.1.1"
+model_name = "XGBoost"
 
 # Load Data
 df = pd.read_csv(feature_path)
 
 # Drop unscored epochs
 df = df.loc[df["score"] != "Unscored"]
-print(df.shape)
 
 # Declare inputs for train/test split
 feature_cols = [
@@ -41,7 +42,7 @@ feature_cols = [
 target_col = "score"
 group_col = "ID_day"
 time_series_idx = "epoch"
-train_size = 0.8
+train_size = 0.75
 
 train_set, test_set = train_test_split(
     df=df,
@@ -92,8 +93,6 @@ train_score = f1_score(y_test, y_test_pred, average="weighted")
 # Train final model
 X = df[feature_cols]
 y = df[target_col]
-model_version = "1.1.0"
-model_name = "XGBoost"
 model_id = model_name + "_" + model_version
 
 final_model, y_pred, time_to_fit, label_encoder = train_model.train_model(
@@ -105,7 +104,7 @@ current_time = datetime.datetime.today()
 
 # Make any notes
 notes = """
-First model w/ Sophie's data. Dropping "Unscored" epochs, as we agreed that would be the designation for noisy epochs.
+Second model w/ Sophie's data. Minor update (hence patch version) to deal with errors in train_test_split module."
 """
 
 # Populate metadata
