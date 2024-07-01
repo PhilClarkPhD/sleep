@@ -33,10 +33,10 @@ def train_test_split(
     for group in df[group_col].unique():
         group_df = df.loc[df[group_col] == group]
         total_rows = len(group_df)
-        train_rows = total_rows * train_size
+        train_rows = int(total_rows * train_size)
 
-        train_set = group_df.loc[:train_rows]
-        test_set = group_df.loc[train_rows:]
+        train_set = group_df.iloc[:train_rows]
+        test_set = group_df.iloc[train_rows:]
 
         train_df = pd.concat([train_df, train_set])
         test_df = pd.concat([test_df, test_set])
