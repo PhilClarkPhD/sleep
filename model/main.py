@@ -5,27 +5,31 @@
 #   2. 'Non' and 'Unscored' still present in the 'score' columns for some rats - remove
 
 import datetime
-import os.path
-
 from train_test_split import train_test_split
 import save_model
 import train_model
 from sklearn.metrics import f1_score
 import pandas as pd
 
+
+# model name / version
+model_version = "1.1.1"
+model_name = "XGBoost"
+model_id = model_name + "_" + model_version
+
+##### PATHS #####
 # artifact path for saving model and metadata
 artifacts_path = "/Users/phil/philclarkphd/sleep/model_artifacts"
 # feature path for loading feature table
 feature_path = "/Users/phil/philclarkphd/sleep/sleep_data/feature_store/features_2024-06-30_20-51-19.csv"
-# model name / version
-model_version = "1.1.1"
-model_name = "XGBoost"
+# Make directory for saving model artifacts if it does not exist yet
+save_dir = save_model.make_save_dir(artifacts_path, model_id)
 
 # Load Data
-df = pd.read_csv(feature_path)
+df_features = pd.read_csv(feature_path)
 
 # Drop unscored epochs
-df = df.loc[df["score"] != "Unscored"]
+df_features = df_features.loc[df_features["score"] != "Unscored"]
 
 # Declare inputs for train/test split
 feature_cols = [
@@ -45,7 +49,7 @@ time_series_idx = "epoch"
 train_size = 0.75
 
 train_set, test_set = train_test_split(
-    df=df,
+    df=df_features,
     train_size=train_size,
     time_series_idx=time_series_idx,
     group_col=group_col,
@@ -91,9 +95,8 @@ train_feature_importance = model_0.feature_importances_
 train_score = f1_score(y_test, y_test_pred, average="weighted")
 
 # Train final model
-X = df[feature_cols]
-y = df[target_col]
-model_id = model_name + "_" + model_version
+X = df_features[feature_cols]
+y = df_features[target_col]
 
 final_model, y_pred, time_to_fit, label_encoder = train_model.train_model(
     X, y, best_params
@@ -115,6 +118,7 @@ metadata = {
     "model_name": model_name,
     "model_version": model_version,
     "model_id": model_id,
+    "model_artifacts_path": save_dir,
     "timestamp": current_time,
     "feature_path": feature_path,
     "feature_cols": feature_cols,
@@ -139,23 +143,15 @@ metadata = {
     "notes": notes,
 }
 
-
-if not os.path.isdir(os.path.join(artifacts_path, model_name)):
-    os.mkdir(os.path.join(artifacts_path, model_name))
-
-SAVE_DIR = os.path.join(artifacts_path, model_id)
-
 save_model.save_model_artifacts(
-    save_dir=SAVE_DIR,
+    save_dir=save_dir,
     model=final_model,
     metadata=metadata,
     encoder=label_encoder,
     file_name=model_id,
 )
 
-# Save test data and predicted values for analysis
-save_path = SAVE_DIR + "/" + f"{model_id}_test_data.csv"
 df_test = test_set[feature_cols]
-df_test["y"] = test_set[target_col]
-df_test["y_pred"] = y_test_pred
-df_test.to_csv(save_path)
+df_test["predicted"] = y_test_pred
+
+save_model.save_test_data(save_dir=save_dir, test_data=df_test, model_id=model_id)
