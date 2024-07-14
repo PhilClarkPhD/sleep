@@ -10,18 +10,20 @@ import save_model
 import train_model
 from sklearn.metrics import f1_score
 import pandas as pd
+from load_config import load_config
 
+# Load the model config
+config_path = "/Users/phil/philclarkphd/sleep/model/model_config.json"
+config = load_config(config_path)
 
 # model name / version
-model_version = "1.1.1"
-model_name = "XGBoost"
+model_version = config["model_version"]
+model_name = config["model_name"]
 model_id = model_name + "_" + model_version
 
 ##### PATHS #####
-# artifact path for saving model and metadata
-artifacts_path = "/Users/phil/philclarkphd/sleep/model_artifacts"
-# feature path for loading feature table
-feature_path = "/Users/phil/philclarkphd/sleep/sleep_data/feature_store/features_2024-06-30_20-51-19.csv"
+artifacts_path = config["paths"]["artifacts_path"]
+feature_path = config["paths"]["feature_path"]
 # Make directory for saving model artifacts if it does not exist yet
 save_dir = save_model.make_save_dir(artifacts_path, model_id)
 
@@ -29,29 +31,20 @@ save_dir = save_model.make_save_dir(artifacts_path, model_id)
 df_features = pd.read_csv(feature_path)
 
 # Drop unscored epochs
-df_features = df_features.loc[df_features["score"] != "Unscored"]
+if config["drop_unscored"]:
+    df_features = df_features.loc[df_features["score"] != "Unscored"]
 
 # Declare inputs for train/test split
-feature_cols = [
-    "EEG_std",
-    "EEG_ss",
-    "EEG_amp",
-    "EMG_std",
-    "EMG_ss",
-    "EMG_events",
-    "delta_rel",
-    "theta_rel",
-    "theta_over_delta",
-]
-target_col = "score"
-group_col = "ID_day"
-time_series_idx = "epoch"
-train_size = 0.75
+feature_cols = config["feature_cols"]
+target_col = config["target_col"]
+group_col = config["group_col"]
+time_series_index = config["time_series_index"]
+train_size = config["train_size"]
 
 train_set, test_set = train_test_split(
     df=df_features,
     train_size=train_size,
-    time_series_idx=time_series_idx,
+    time_series_index=time_series_index,
     group_col=group_col,
 )
 
@@ -63,20 +56,11 @@ X_test = test_set[feature_cols]
 y_test = test_set[target_col]
 
 # Find best model params with RandomSearchCV
-search_space = {
-    "n_estimators": [100, 200, 300],
-    "max_depth": [3, 5, 7],
-    "learning_rate": [0.1, 0.01, 0.001],
-    "subsample": [0.6, 0.8, 1.0],
-    "colsample_bytree": [0.6, 0.8, 1.0],
-    "gamma": [0, 0.1, 0.2],
-    "reg_alpha": [0, 0.01, 0.1],
-    "reg_lambda": [0, 0.01, 0.1],
-}
-random_state = 42
-cv_folds = 5
-n_iter = 50
-eval_metric = "f1_weighted"  # Use this on imbalanced multiclass data
+search_space = config["search_space"]
+random_state = config["random_state"]
+cv_folds = config["cv_folds"]
+n_iter = config["n_iter"]
+eval_metric = config["eval_metric"]  # Use this on imbalanced multiclass data
 best_params, search_duration = train_model.find_best_params(
     X_train=X_train,
     y_train=y_train,
@@ -106,9 +90,7 @@ model_score = f1_score(y, y_pred, average="weighted")
 current_time = datetime.datetime.today()
 
 # Make any notes
-notes = """
-Second model w/ Sophie's data. Minor update (hence patch version) to deal with errors in train_test_split module."
-"""
+notes = config["notes"]
 
 # Populate metadata
 n_train_rows = X_train.shape[0]
@@ -124,7 +106,7 @@ metadata = {
     "feature_cols": feature_cols,
     "target_col": target_col,
     "group_col": group_col,
-    "time_series_idx": time_series_idx,
+    "time_series_index": time_series_index,
     "train_size": train_size,
     "n_train_rows": n_train_rows,
     "n_test_rows": n_test_rows,
