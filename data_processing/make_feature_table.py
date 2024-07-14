@@ -1,18 +1,24 @@
 import create_features as cf
 from datetime import datetime
+from utils.load_config import load_config
 
-BASE_PATH = "/Users/phil/philclarkphd/sleep/sleep_data/training_data/V"
-FEATURE_STORE_DIR = "/Users/phil/philclarkphd/sleep/sleep_data/feature_store"
+# Load fs config
+config_path = "/Users/phil/philclarkphd/sleep/data_processing/fs_config.json"
+config = load_config(config_path)
+
+
+training_data_path = config["paths"]["training_data_path"]
+feature_store_path = config["paths"]["feature_store_path"]
 
 current_time = datetime.strftime(datetime.today(), "%Y-%m-%d_%H-%M-%S")
-FILENAME = f"features_{current_time}.csv"
-SAVE_PATH = FEATURE_STORE_DIR + "/" + FILENAME
+feature_table_name = f"features_{current_time}.csv"
+save_path = feature_store_path + "/" + feature_table_name
 
 # Call functions to make feature_df
-df_features = cf.make_feature_df(BASE_PATH)
+df_features = cf.make_feature_df(training_data_path)
 print(df_features.shape)
 print(df_features.head())
-print(FILENAME)
+print(feature_table_name)
 
 # Save feature table in feature store
-df_features.to_csv(SAVE_PATH)
+df_features.to_csv(save_path)
