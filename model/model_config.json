@@ -1,0 +1,39 @@
+{
+  "model_version": "1.0.0",
+  "model_name": "V-XGBoost",
+  "paths": {
+    "artifacts_path": "/Users/phil/philclarkphd/sleep/model_artifacts",
+    "feature_path": "/Users/phil/philclarkphd/sleep/sleep_data/feature_store/features_2024-06-30_22-31-20.csv"
+  },
+  "feature_cols": [
+    "EEG_std",
+    "EEG_ss",
+    "EEG_amp",
+    "EMG_std",
+    "EMG_ss",
+    "EMG_events",
+    "delta_rel",
+    "theta_rel",
+    "theta_over_delta"
+  ],
+  "drop_unscored": true,
+  "target_col": "score",
+  "group_col": "ID_day",
+  "time_series_index": "epoch",
+  "train_size": 0.75,
+  "search_space": {
+    "n_estimators": [100, 200, 300],
+    "max_depth": [3, 5, 7],
+    "learning_rate": [0.1, 0.01, 0.001],
+    "subsample": [0.6, 0.8, 1.0],
+    "colsample_bytree": [0.6, 0.8, 1.0],
+    "gamma": [0, 0.1, 0.2],
+    "reg_alpha": [0, 0.01, 0.1],
+    "reg_lambda": [0, 0.01, 0.1]
+  },
+  "random_state": 42,
+  "cv_folds": 5,
+  "n_iter": 50,
+  "eval_metric": "f1_weighted",
+  "notes": "pass"
+}
