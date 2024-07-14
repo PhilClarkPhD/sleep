@@ -3,7 +3,7 @@
   "model_name": "V-XGBoost",
   "paths": {
     "artifacts_path": "/Users/phil/philclarkphd/sleep/model_artifacts",
-    "feature_path": "/Users/phil/philclarkphd/sleep/sleep_data/feature_store/features_2024-06-30_22-31-20.csv"
+    "feature_path": "/Users/phil/philclarkphd/sleep/feature_store/features_2024-06-30_22-31-20.csv"
   },
   "feature_cols": [
     "EEG_std",

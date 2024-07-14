@@ -10,7 +10,7 @@ import save_model
 import train_model
 from sklearn.metrics import f1_score
 import pandas as pd
-from load_config import load_config
+from utils.load_config import load_config
 
 # Load the model config
 config_path = "/Users/phil/philclarkphd/sleep/model/model_config.json"

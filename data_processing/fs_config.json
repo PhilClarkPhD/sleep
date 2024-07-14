@@ -1,0 +1,6 @@
+{
+  "paths": {
+    "data_directory": "/Users/phil/philclarkphd/sleep/training_data/V",
+    "feature_store_directory": "/Users/phil/philclarkphd/sleep/feature_store"
+  }
+}
