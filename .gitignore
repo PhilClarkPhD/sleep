@@ -12,6 +12,7 @@ __*
 *.ipynb_checkpoints*
 
 # data
-sleep_data/
+feature_store/
+training_data/
 model_artifacts/
 model_cards/
