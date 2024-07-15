@@ -1,6 +1,6 @@
 {
   "paths": {
-    "training_data_path": "/Users/phil/philclarkphd/sleep/training_data/V",
+    "training_data_path": "/Users/phil/philclarkphd/sleep/training_data/sophie/subset_1",
     "feature_store_path": "/Users/phil/philclarkphd/sleep/feature_store"
   }
 }

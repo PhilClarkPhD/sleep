@@ -6,9 +6,9 @@ from evidently.metrics import *
 from evidently import ColumnMapping
 
 ARTIFACT_PATH = (
-    "/Users/phil/philclarkphd/sleep/model_artifacts/V-XGBoost_1.0.0/V-XGBoost_1.0.0.pkl"
+    "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.1.4/XGBoost_1.1.4.pkl"
 )
-TEST_DATA_PATH = "/Users/phil/philclarkphd/sleep/model_artifacts/V-XGBoost_1.0.0/V-XGBoost_1.0.0_test_data.csv"
+TEST_DATA_PATH = "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.1.4/XGBoost_1.1.4_test_data.csv"
 
 # Load artifacts
 model, metadata, encoder = joblib.load(ARTIFACT_PATH)
@@ -54,8 +54,8 @@ model_details = f"""
 training_dataset = f"""
 # Training dataset
 
-* **Training dataset**: Sleep recordings from V. Uses all recordings, but do not have correct baseline epochs for normalizing the scores, so used default value (9).
-* **Sub-groups**: There is just 1 recordings per rat, taken at baseline.
+* **Training dataset**: Sleep recordings from Sophie subset 1. Testing new quantile_diff and quantile_80 features.
+* **Sub-groups**: There is just 1 recording per rat, taken at baseline.
 * **Pre-processing**: From the raw EEG and EMG data, we derive features to capture EEG and EMG variance (standard deviation, signal amplitude, etc.). We also use a fourier series to calculate the relative amounts of delta, theta and theta/delta power in the EEG signal.
 * **Feature Columns**: {metadata["feature_cols"]}
 * **Target Column**: {metadata["target_col"]}
@@ -73,7 +73,7 @@ model_evaluation = f"""
 model_summary = """
 # Model Summary
 
-* First model w/ V's data
+* Testing features w/ Sophie's data. 3rd attempt
 """
 
 ## Build Model Card ##

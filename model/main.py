@@ -2,7 +2,6 @@
 # Find better way to save the test data and predicted scores (move function into save_model?)
 # Two issues to fix in future QA/feature engineering workflow:
 #   1. Epochs did not all start at 0 (some started at 1)
-#   2. 'Non' and 'Unscored' still present in the 'score' columns for some rats - remove
 
 import datetime
 from train_test_split import train_test_split

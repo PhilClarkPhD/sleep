@@ -227,44 +227,32 @@ def compute_signal_features(
     """
 
     array_len = window * samplerate
-
-    EEG_std = {}
+    EEG_quantile_diff = {}
+    EEG_quantile_80 = {}
+    EEG_ptp = {}
     EEG_ss = {}
     EEG_amp = {}
-
+    EEG_std = {}
     EMG_std = {}
-    EMG_ss = {}
     EMG_events = {}
+    EMG_ptp = {}
 
-    # Compute baseline EEG/EMG amplitudes and EMG event threshold
-    base_std_EEG = np.std(
-        data["eeg"][(start_epoch * array_len) : ((start_epoch * array_len) + array_len)]
-    )
-    base_amp_EEG = np.mean(
-        np.absolute(
-            data["eeg"][
-                (start_epoch * array_len) : ((start_epoch * array_len) + array_len)
-            ]
-        )
-    )
-    base_ss_EEG = np.sum(
-        np.square(
-            data["eeg"][
-                (start_epoch * array_len) : ((start_epoch * array_len) + array_len)
-            ]
-        )
-    )
+    # Compute baseline EEG/EMG signals
+    base_eeg_epoch = data["eeg"][
+        (start_epoch * array_len) : ((start_epoch * array_len) + array_len)
+    ]
+    base_emg_epoch = data["emg"][
+        (start_epoch * array_len) : ((start_epoch * array_len) + array_len)
+    ]
 
-    base_std_EMG = np.std(
-        data["emg"][(start_epoch * array_len) : ((start_epoch * array_len) + array_len)]
-    )
-    base_ss_EMG = np.sum(
-        np.square(
-            data["emg"][
-                (start_epoch * array_len) : ((start_epoch * array_len) + array_len)
-            ]
-        )
-    )
+    base_quantile_diff_EEG = np.sum(np.quantile(base_eeg_epoch, 0.8) - base_eeg_epoch)
+    base_quantile_80_EEG = np.quantile(base_eeg_epoch, 0.8)
+    base_ptp_EEG = np.ptp(base_eeg_epoch)
+    base_ss_EEG = np.sum(np.square(base_eeg_epoch))
+    base_std_EEG = np.std(base_eeg_epoch)
+    base_amp_EEG = np.mean(np.absolute(base_eeg_epoch))
+    base_std_EMG = np.std(base_emg_epoch)
+    base_ptp_EMG = np.ptp(base_emg_epoch)
 
     event_threshold = 2 * base_std_EMG
 
@@ -278,12 +266,16 @@ def compute_signal_features(
         EMG = data["emg"][start:end]
 
         # Calculate EEG_std, EMG_std, and EEG_amp, and add to dictionaries
-        EEG_std[epoch] = np.std(EEG) / base_std_EEG
-        EEG_amp[epoch] = np.mean(np.absolute(EEG)) / base_amp_EEG
+        EEG_quantile_diff[epoch] = (
+            np.sum(EEG - np.quantile(EEG, 0.8)) / base_quantile_diff_EEG
+        )
+        EEG_quantile_80[epoch] = np.quantile(EEG, 0.8) / base_quantile_80_EEG
+        EEG_ptp[epoch] = np.ptp(EEG) / base_ptp_EEG
         EEG_ss[epoch] = np.sum(np.square(EEG)) / base_ss_EEG
-
-        EMG_ss[epoch] = np.sum(np.square(EMG)) / base_ss_EMG
+        EEG_amp[epoch] = np.mean(np.absolute(EEG)) / base_amp_EEG
+        EEG_std[epoch] = np.std(EEG) / base_std_EEG
         EMG_std[epoch] = np.std(EMG) / base_std_EMG
+        EMG_ptp[epoch] = np.ptp(EMG) / base_ptp_EMG
 
         # Calculate EMG events above event_threshold
         event_array = EMG.loc[EMG > event_threshold]
@@ -305,8 +297,30 @@ def compute_signal_features(
 
         epoch += 1
 
-    output = pd.DataFrame([EEG_std, EEG_ss, EEG_amp, EMG_std, EMG_ss, EMG_events]).T
-    output.columns = ["EEG_std", "EEG_ss", "EEG_amp", "EMG_std", "EMG_ss", "EMG_events"]
+    output = pd.DataFrame(
+        [
+            EEG_quantile_diff,
+            EEG_quantile_80,
+            EEG_ptp,
+            EEG_ss,
+            EEG_amp,
+            EEG_std,
+            EMG_std,
+            EMG_events,
+            EMG_ptp,
+        ]
+    ).T
+    output.columns = [
+        "EEG_quantile_diff",
+        "EEG_quantile_80",
+        "EEG_ptp",
+        "EEG_ss",
+        "EEG_amp",
+        "EEG_std",
+        "EMG_std",
+        "EMG_events",
+        "EMG_ptp",
+    ]
 
     return output
 

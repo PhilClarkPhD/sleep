@@ -1,4 +1,4 @@
-import create_features as cf
+from create_features import make_feature_df
 from datetime import datetime
 from utils.load_config import load_config
 
@@ -15,7 +15,7 @@ feature_table_name = f"features_{current_time}.csv"
 save_path = feature_store_path + "/" + feature_table_name
 
 # Call functions to make feature_df
-df_features = cf.make_feature_df(training_data_path)
+df_features = make_feature_df(training_data_path)
 print(df_features.shape)
 print(df_features.head())
 print(feature_table_name)
