@@ -1,9 +1,10 @@
 {
-  "model_version": "1.1.4",
+  "model_version": "1.2.0",
   "model_name": "XGBoost",
   "paths": {
     "artifacts_path": "/Users/phil/philclarkphd/sleep/model_artifacts",
-    "feature_path": "/Users/phil/philclarkphd/sleep/feature_store/features_2024-07-14_20-22-14.csv"
+    "feature_store_table": "features_2024-07-14_20-22-14.csv",
+    "feature_store_directory": "/Users/phil/philclarkphd/sleep/feature_store/"
   },
   "feature_cols": [
     "EEG_quantile_80",
@@ -17,6 +18,7 @@
     "theta_over_delta"
   ],
   "drop_unscored": true,
+  "use_rule_based_filter": true,
   "target_col": "score",
   "group_col": "ID_day",
   "time_series_index": "epoch",
@@ -35,5 +37,5 @@
   "cv_folds": 5,
   "n_iter": 50,
   "eval_metric": "f1_weighted",
-  "notes": "pass"
+  "notes": "First pass using new features + rule-based features on Sophie's subset_1 dataset."
 }
