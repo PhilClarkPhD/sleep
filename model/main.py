@@ -9,7 +9,9 @@ import save_model
 import train_model
 from sklearn.metrics import f1_score
 import pandas as pd
+import os
 from utils.load_config import load_config
+from data_processing.sleep_functions import modify_scores
 
 # Load the model config
 config_path = "/Users/phil/philclarkphd/sleep/model/model_config.json"
@@ -22,12 +24,16 @@ model_id = model_name + "_" + model_version
 
 ##### PATHS #####
 artifacts_path = config["paths"]["artifacts_path"]
-feature_path = config["paths"]["feature_path"]
+
+feature_store_table = config["paths"]["feature_store_table"]
+feature_store_directory = config["paths"]["feature_store_directory"]
+feature_store_path = os.path.join(feature_store_directory, feature_store_table)
+
 # Make directory for saving model artifacts if it does not exist yet
 save_dir = save_model.make_save_dir(artifacts_path, model_id)
 
 # Load Data
-df_features = pd.read_csv(feature_path)
+df_features = pd.read_csv(feature_store_path)
 
 # Drop unscored epochs
 if config["drop_unscored"]:
@@ -72,10 +78,15 @@ best_params, search_duration = train_model.find_best_params(
 
 # Train model on test data w/ best params
 model_0, y_test_pred, *_ = train_model.train_model(X_test, y_test, best_params)
+y_test_pred_filtered = modify_scores(y_test_pred)
 
 # Evaluate Model
-train_feature_importance = model_0.feature_importances_
-train_score = f1_score(y_test, y_test_pred, average="weighted")
+if config["use_rule_based_filter"]:
+    train_feature_importance = model_0.feature_importances_
+    train_score = f1_score(y_test, y_test_pred_filtered, average="weighted")
+else:
+    train_feature_importance = model_0.feature_importances_
+    train_score = f1_score(y_test, y_test_pred, average="weighted")
 
 # Train final model
 X = df_features[feature_cols]
@@ -84,8 +95,12 @@ y = df_features[target_col]
 final_model, y_pred, time_to_fit, label_encoder = train_model.train_model(
     X, y, best_params
 )
+y_pred_filtered = modify_scores(y_pred)
 
-model_score = f1_score(y, y_pred, average="weighted")
+if config["use_rule_based_filter"]:
+    model_score = f1_score(y, y_pred, average="weighted")
+else:
+    model_score = f1_score(y, y_pred_filtered, average="weighted")
 current_time = datetime.datetime.today()
 
 # Make any notes
@@ -101,7 +116,7 @@ metadata = {
     "model_id": model_id,
     "model_artifacts_path": save_dir,
     "timestamp": current_time,
-    "feature_path": feature_path,
+    "feature_store_table": feature_store_table,
     "feature_cols": feature_cols,
     "target_col": target_col,
     "group_col": group_col,
@@ -136,6 +151,10 @@ save_model.save_model_artifacts(
 df_test = test_set[feature_cols]
 df_test["score"] = y_test
 df_test["predicted_score"] = y_test_pred
+
+if config["use_rule_based_filter"]:
+    df_test["predicted_score_filtered"] = y_test_pred_filtered
+
 
 test_data_save_path = save_model.save_test_data(
     save_dir=save_dir, test_data=df_test, model_id=model_id

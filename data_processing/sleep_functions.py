@@ -368,19 +368,19 @@ def plot_confusion_matrix(
     return cm
 
 
-def modify_scores(pred: list) -> list:
-    ls = []
-    for idx, val in enumerate(pred):
+def modify_scores(predicted: list) -> list:
+    def replace_val(idx):
         try:
-            if pred[idx - 1] == "Wake" and val == "REM":
-                ls.append("Wake")
-            elif (
-                pred[idx - 2] == pred[idx - 1] == pred[idx + 1] == pred[idx + 2] != val
-            ) & (val != "REM"):
-                ls.append(pred[idx - 1])
-            else:
-                ls.append(val)
-        except IndexError:
-            ls.append(val)
-            next
-    return ls
+            if (predicted[idx - 2 : idx] == predicted[idx + 1 : idx + 3]) and (
+                predicted[idx] != "REM"
+            ):
+                return predicted[idx - 1]
+            elif (predicted[idx - 1] == predicted[idx - 2] == "Wake") and (
+                predicted[idx] == "REM"
+            ):
+                return "Wake"
+        except Exception:
+            pass
+        return predicted[idx]
+
+    return [replace_val(idx) for idx in range(len(predicted))]
