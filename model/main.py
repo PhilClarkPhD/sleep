@@ -81,11 +81,10 @@ model_0, y_test_pred, *_ = train_model.train_model(X_test, y_test, best_params)
 y_test_pred_filtered = modify_scores(y_test_pred)
 
 # Evaluate Model
+train_feature_importance = model_0.feature_importances_
 if config["use_rule_based_filter"]:
-    train_feature_importance = model_0.feature_importances_
     train_score = f1_score(y_test, y_test_pred_filtered, average="weighted")
 else:
-    train_feature_importance = model_0.feature_importances_
     train_score = f1_score(y_test, y_test_pred, average="weighted")
 
 # Train final model
@@ -98,9 +97,9 @@ final_model, y_pred, time_to_fit, label_encoder = train_model.train_model(
 y_pred_filtered = modify_scores(y_pred)
 
 if config["use_rule_based_filter"]:
-    model_score = f1_score(y, y_pred, average="weighted")
-else:
     model_score = f1_score(y, y_pred_filtered, average="weighted")
+else:
+    model_score = f1_score(y, y_pred, average="weighted")
 current_time = datetime.datetime.today()
 
 # Make any notes
