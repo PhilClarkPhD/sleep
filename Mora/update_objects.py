@@ -1,6 +1,13 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
-from initialize_objects import General, Home, Model, Data, Timestamp_Dialog
+from initialize_objects import (
+    General,
+    Home,
+    Model,
+    Data,
+    Timestamp_Dialog,
+    LightDark_Dialog,
+)
 import os
 import pandas as pd
 import numpy as np
@@ -8,7 +15,7 @@ from scipy.io import wavfile
 from data_processing import sleep_functions as sleep
 import pyqtgraph as pg
 from PyQt5.QtGui import QKeyEvent
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 
 class Funcs(QWidget):
@@ -20,6 +27,7 @@ class Funcs(QWidget):
         self.Model = Model()
         self.Data = Data()
         self.Timestamp_Dialog = Timestamp_Dialog()
+        self.LightDark_Dialog = LightDark_Dialog()
 
         # brushes for coloring scoring windows
         self.rem = pg.mkBrush(pg.intColor(90, alpha=50))
@@ -96,6 +104,16 @@ class Funcs(QWidget):
         ]
         return timestamp_series
 
+    def calculate_dark_phase_from_timestamp(self, timestamp_series) -> list:
+        timestamp_series = pd.to_datetime(timestamp_series)
+        mask = (timestamp_series >= self.General.DarkTimeStart) & (
+            timestamp_series <= self.General.DarkTimeEnd
+        )
+        dark_phase_series = pd.Series(0, index=timestamp_series.index)
+        dark_phase_series[mask] = 1
+
+        return dark_phase_series
+
     def export_scores(self) -> None:
         name = str(self.name_file())
         path = QFileDialog.getExistingDirectory(
@@ -109,8 +127,13 @@ class Funcs(QWidget):
         ).T
         score_export.columns = ["epoch", "score"]
 
-        if self.General.timestamp:
+        if self.General.timestamp_selected:
             score_export["timestamp"] = self.calculate_timestamp_from_epoch()
+
+        if self.General.LightDark_input:
+            score_export["dark_phase"] = self.calculate_dark_phase_from_timestamp(
+                score_export["timestamp"]
+            )
 
         score_export.to_csv(file_path + ".csv", sep=",", index=False)
 
@@ -210,6 +233,8 @@ class Funcs(QWidget):
         dialog = self.Timestamp_Dialog
         if dialog.exec_() == QDialog.Accepted:
             self.General.timestamp = dialog.getDateTime().toPyDateTime()
+            self.General.timestamp_selected = True
+            self.getDarkStartEnd()
         else:
             QMessageBox.information(
                 self, "Dialog Canceled", "No date and time selected."
@@ -223,6 +248,21 @@ class Funcs(QWidget):
             for key, value in xlabels.items()
         }
         return xlabels
+
+    def getDarkStartEnd(self):
+        dialog = self.LightDark_Dialog
+        if dialog.exec_() == QDialog.Accepted:
+            dark_start_time, dark_end_time = dialog.getDarkStartEnd()
+            self.General.DarkTimeStart = dark_start_time.toPyDateTime()
+            self.General.DarkTimeEnd = dark_end_time.toPyDateTime()
+
+            # Validation checks have passed, set LightDark indicator to True
+            self.General.LightDark_input = True
+
+        else:
+            QMessageBox.information(
+                self, "Dialog Canceled", "Dark phase start and end not selected."
+            )
 
     def load_data(self) -> None:
         path, ext = QFileDialog.getOpenFileName(

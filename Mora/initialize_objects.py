@@ -14,9 +14,15 @@ class General(QWidget):
         self.current_path = os.path.dirname(os.path.realpath(__file__))
 
         # Timestamp
+        self.timestamp_selected = False
         self.timestamp = None
         self.TIMESTAMP_FORMAT_PLOTTING = "%Y-%m-%d\n%H:%M:%S"
         self.TIMESTAMP_FORMAT_EXPORTING = "%Y-%m-%d %H:%M:%S"
+
+        # Dark Period start and end times
+        self.LightDark_input = False
+        self.DarkTimeStart = None
+        self.DarkTimeEnd = None
 
 
 class Timestamp_Dialog(QDialog):
@@ -43,6 +49,49 @@ class Timestamp_Dialog(QDialog):
 
     def getDateTime(self):
         return self.dateTimeEdit.dateTime()
+
+
+class LightDark_Dialog(QDialog):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Start and End Time of Dark periods")
+        self.setGeometry(100, 100, 500, 100)
+
+        layout = QVBoxLayout()
+        start_time_label = QLabel("Enter start time of dark period")
+        self.DarkTimeStart = QDateTimeEdit(self)
+        self.DarkTimeStart.setDateTime(QDateTime.currentDateTime())
+        self.DarkTimeStart.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
+        layout.addWidget(start_time_label)
+        layout.addWidget(self.DarkTimeStart)
+
+        end_time_label = QLabel("Enter end time of dark period")
+        self.DarkTimeEnd = QDateTimeEdit(self)
+        self.DarkTimeEnd.setDateTime(QDateTime.currentDateTime())
+        self.DarkTimeEnd.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
+        layout.addWidget(end_time_label)
+        layout.addWidget(self.DarkTimeEnd)
+
+        self.buttonBox = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self
+        )
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+        layout.addWidget(self.buttonBox)
+
+        self.setLayout(layout)
+
+    def getDarkStartEnd(self):
+        self.validateDarkStartEnd()
+        return self.DarkTimeStart.dateTime(), self.DarkTimeEnd.dateTime()
+
+    def validateDarkStartEnd(self):
+        if (
+            not self.DarkTimeStart.dateTime().toPyDateTime()
+            < self.DarkTimeEnd.dateTime().toPyDateTime()
+        ):
+            raise ValueError("Start of dark phase must come before end of dark period")
 
 
 class Data(QWidget):
