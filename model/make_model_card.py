@@ -4,11 +4,17 @@ import joblib
 from evidently.report import Report
 from evidently.metrics import *
 from evidently import ColumnMapping
+from utils.load_config import load_config
+
+# Load the model config
+config_path = "/Users/phil/philclarkphd/sleep/model/model_config.json"
+config = load_config(config_path)
 
 ARTIFACT_PATH = (
-    "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.1.4/XGBoost_1.1.4.pkl"
+    "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.2.0/XGBoost_1.2.0.pkl"
 )
-TEST_DATA_PATH = "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.1.4/XGBoost_1.1.4_test_data.csv"
+
+TEST_DATA_PATH = "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.2.0/XGBoost_1.2.0_test_data.csv"
 
 # Load artifacts
 model, metadata, encoder = joblib.load(ARTIFACT_PATH)
@@ -33,6 +39,7 @@ model_details = f"""
 * **Model Version**: {metadata["model_version"]}
 * **Model Type**: {metadata["model_name"]} classifier
 * **Training Date**: {metadata["timestamp"]}
+* **Feature Store Table**: {metadata["feature_store_table"]}
 * **Training Set Proportion**: {metadata["train_size"]}
 * **HyperParameters**: {metadata["best_params"]}
 * **Feature Importances**: {feature_importances}
@@ -54,7 +61,7 @@ model_details = f"""
 training_dataset = f"""
 # Training dataset
 
-* **Training dataset**: Sleep recordings from Sophie subset 1. Testing new quantile_diff and quantile_80 features.
+* **Training dataset**: Sleep recordings from Sophie subset 1. Testing new rule-based filter.
 * **Sub-groups**: There is just 1 recording per rat, taken at baseline.
 * **Pre-processing**: From the raw EEG and EMG data, we derive features to capture EEG and EMG variance (standard deviation, signal amplitude, etc.). We also use a fourier series to calculate the relative amounts of delta, theta and theta/delta power in the EEG signal.
 * **Feature Columns**: {metadata["feature_cols"]}
@@ -73,14 +80,18 @@ model_evaluation = f"""
 model_summary = """
 # Model Summary
 
-* Testing features w/ Sophie's data. 3rd attempt
+* Model run w/ Sophie's data using rule based filter.
 """
 
 ## Build Model Card ##
 column_mapping = ColumnMapping()
 
+if config["use_rule_based_filter"]:
+    column_mapping.prediction = "predicted_score_filtered"
+else:
+    column_mapping_prediction = "predicted_score"
+
 column_mapping.target = "score"
-column_mapping.prediction = "predicted_score"
 column_mapping.numerical_features = metadata["feature_cols"]
 column_mapping.task = "classification"
 
