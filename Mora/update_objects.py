@@ -104,6 +104,16 @@ class Funcs(QWidget):
         ]
         return timestamp_series
 
+    def calculate_dark_phase_from_timestamp(self, timestamp_series) -> list:
+        timestamp_series = pd.to_datetime(timestamp_series)
+        mask = (timestamp_series >= self.General.DarkTimeStart) & (
+            timestamp_series <= self.General.DarkTimeEnd
+        )
+        dark_phase_series = pd.Series(0, index=timestamp_series.index)
+        dark_phase_series[mask] = 1
+
+        return dark_phase_series
+
     def export_scores(self) -> None:
         name = str(self.name_file())
         path = QFileDialog.getExistingDirectory(
@@ -117,8 +127,13 @@ class Funcs(QWidget):
         ).T
         score_export.columns = ["epoch", "score"]
 
-        if self.General.timestamp_index:
+        if self.General.timestamp_selected:
             score_export["timestamp"] = self.calculate_timestamp_from_epoch()
+
+        if self.General.LightDark_input:
+            score_export["dark_phase"] = self.calculate_dark_phase_from_timestamp(
+                score_export["timestamp"]
+            )
 
         score_export.to_csv(file_path + ".csv", sep=",", index=False)
 
@@ -238,8 +253,16 @@ class Funcs(QWidget):
         dialog = self.LightDark_Dialog
         if dialog.exec_() == QDialog.Accepted:
             dark_start_time, dark_end_time = dialog.getDarkStartEnd()
-        self.General.DarkStartTime = dark_start_time.toPyDateTime()
-        self.General.DarkEndTime = dark_end_time.toPyDateTime()
+            self.General.DarkTimeStart = dark_start_time.toPyDateTime()
+            self.General.DarkTimeEnd = dark_end_time.toPyDateTime()
+
+            # Validation checks have passed, set LightDark indicator to True
+            self.General.LightDark_input = True
+
+        else:
+            QMessageBox.information(
+                self, "Dialog Canceled", "Dark phase start and end not selected."
+            )
 
     def load_data(self) -> None:
         path, ext = QFileDialog.getOpenFileName(

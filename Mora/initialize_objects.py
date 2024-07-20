@@ -20,6 +20,7 @@ class General(QWidget):
         self.TIMESTAMP_FORMAT_EXPORTING = "%Y-%m-%d %H:%M:%S"
 
         # Dark Period start and end times
+        self.LightDark_input = False
         self.DarkTimeStart = None
         self.DarkTimeEnd = None
 
@@ -88,7 +89,7 @@ class LightDark_Dialog(QDialog):
     def validateDarkStartEnd(self):
         if (
             not self.DarkTimeStart.dateTime().toPyDateTime()
-            > self.DarkTimeEnd.dateTime().toPyDateTime()
+            < self.DarkTimeEnd.dateTime().toPyDateTime()
         ):
             raise ValueError("Start of dark phase must come before end of dark period")
 
