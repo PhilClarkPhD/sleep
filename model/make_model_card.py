@@ -11,10 +11,10 @@ config_path = "/Users/phil/philclarkphd/sleep/model/model_config.json"
 config = load_config(config_path)
 
 ARTIFACT_PATH = (
-    "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.2.0/XGBoost_1.2.0.pkl"
+    "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.2.1/XGBoost_1.2.1.pkl"
 )
 
-TEST_DATA_PATH = "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.2.0/XGBoost_1.2.0_test_data.csv"
+TEST_DATA_PATH = "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.2.1/XGBoost_1.2.1_test_data.csv"
 
 # Load artifacts
 model, metadata, encoder = joblib.load(ARTIFACT_PATH)
