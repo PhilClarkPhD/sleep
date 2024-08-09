@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+from numpy.typing import ArrayLike
 import numpy as np
 from scipy.fft import rfft, rfftfreq
 import scipy.spatial.transform._rotation_groups  # keep this for compiling
@@ -368,7 +369,10 @@ def plot_confusion_matrix(
     return cm
 
 
-def modify_scores(predicted: list) -> list:
+def modify_scores(predicted: ArrayLike) -> list:
+    # Errors out unless converted to list first
+    predicted = predicted.tolist()
+
     def replace_val(idx):
         try:
             if (predicted[idx - 2 : idx] == predicted[idx + 1 : idx + 3]) and (
