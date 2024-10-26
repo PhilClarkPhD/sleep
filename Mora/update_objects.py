@@ -554,12 +554,12 @@ class Funcs(QWidget):
 
         features = self.Data.metrics[
             [
-                "EEG_std",
+                "EEG_quantile_80",
+                "EEG_ptp",
                 "EEG_ss",
-                "EEG_amp",
                 "EMG_std",
-                "EMG_ss",
                 "EMG_events",
+                "EMG_ptp",
                 "delta_rel",
                 "theta_rel",
                 "theta_over_delta",
