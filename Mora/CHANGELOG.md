@@ -1,7 +1,7 @@
 # 2024-07-21
 ## ADDED
 - `calculate_dark_phase_from_timestamp()` in `update_objects.py`
-- New `dark_phase` column in export
+- `dark_phase` column in export
 
 # 2024-07-20
 ## ADDED
