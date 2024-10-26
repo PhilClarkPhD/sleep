@@ -1,9 +1,9 @@
 {
-  "model_version": "1.2.1",
+  "model_version": "1.2.2",
   "model_name": "XGBoost",
   "paths": {
     "artifacts_path": "/Users/phil/philclarkphd/sleep/model_artifacts",
-    "feature_store_table": "features_2024-07-14_20-22-14.csv",
+    "feature_store_table": "features_2024-09-07_15-42-15.csv",
     "feature_store_directory": "/Users/phil/philclarkphd/sleep/feature_store/"
   },
   "feature_cols": [
@@ -37,5 +37,5 @@
   "cv_folds": 5,
   "n_iter": 50,
   "eval_metric": "f1_weighted",
-  "notes": "First pass using new features + rule-based features on Sophie's subset_1 dataset."
+  "notes": "First model w/ V's data using Sophie's recommended representative epochs."
 }

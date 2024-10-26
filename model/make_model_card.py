@@ -11,10 +11,10 @@ config_path = "/Users/phil/philclarkphd/sleep/model/model_config.json"
 config = load_config(config_path)
 
 ARTIFACT_PATH = (
-    "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.2.1/XGBoost_1.2.1.pkl"
+    "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.2.2/XGBoost_1.2.2.pkl"
 )
 
-TEST_DATA_PATH = "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.2.1/XGBoost_1.2.1_test_data.csv"
+TEST_DATA_PATH = "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.2.2/XGBoost_1.2.2_test_data.csv"
 
 # Load artifacts
 model, metadata, encoder = joblib.load(ARTIFACT_PATH)
@@ -61,7 +61,7 @@ model_details = f"""
 training_dataset = f"""
 # Training dataset
 
-* **Training dataset**: Sleep recordings from Sophie subset 1. Testing new rule-based filter.
+* **Training dataset**: Sleep recordings from V.
 * **Sub-groups**: There is just 1 recording per rat, taken at baseline.
 * **Pre-processing**: From the raw EEG and EMG data, we derive features to capture EEG and EMG variance (standard deviation, signal amplitude, etc.). We also use a fourier series to calculate the relative amounts of delta, theta and theta/delta power in the EEG signal.
 * **Feature Columns**: {metadata["feature_cols"]}
@@ -80,7 +80,7 @@ model_evaluation = f"""
 model_summary = """
 # Model Summary
 
-* Model run w/ Sophie's data using rule based filter.
+* Model run w/ V's data and new representative epochs.
 """
 
 ## Build Model Card ##
