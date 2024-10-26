@@ -1,0 +1,41 @@
+{
+  "model_version": "1.2.2",
+  "model_name": "XGBoost",
+  "paths": {
+    "artifacts_path": "/Users/phil/philclarkphd/sleep/model_artifacts",
+    "feature_store_table": "features_2024-09-07_15-42-15.csv",
+    "feature_store_directory": "/Users/phil/philclarkphd/sleep/feature_store/"
+  },
+  "feature_cols": [
+    "EEG_quantile_80",
+    "EEG_ptp",
+    "EEG_ss",
+    "EMG_std",
+    "EMG_events",
+    "EMG_ptp",
+    "delta_rel",
+    "theta_rel",
+    "theta_over_delta"
+  ],
+  "drop_unscored": true,
+  "use_rule_based_filter": true,
+  "target_col": "score",
+  "group_col": "ID_day",
+  "time_series_index": "epoch",
+  "train_size": 0.75,
+  "search_space": {
+    "n_estimators": [100, 200, 300],
+    "max_depth": [3, 5, 7],
+    "learning_rate": [0.1, 0.01, 0.001],
+    "subsample": [0.6, 0.8, 1.0],
+    "colsample_bytree": [0.6, 0.8, 1.0],
+    "gamma": [0, 0.1, 0.2],
+    "reg_alpha": [0, 0.01, 0.1],
+    "reg_lambda": [0, 0.01, 0.1]
+  },
+  "random_state": 42,
+  "cv_folds": 5,
+  "n_iter": 50,
+  "eval_metric": "f1_weighted",
+  "notes": "First model w/ V's data using Sophie's recommended representative epochs."
+}

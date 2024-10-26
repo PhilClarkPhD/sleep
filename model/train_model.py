@@ -19,7 +19,7 @@ def find_best_params(
     Args:
         X_train (pd.DataFrame): Dataframe containing the values of the predictor variables.
         y_train (pd.DataFrame): Dataframe containing the values of the target variable.
-        search_space (dict[str, list]): Dictionary containing the parameter names and a corresponding list of values to be evluated.
+        search_space (dict[str, list]): Dictionary containing the parameter names and values to be evaluated.
         random_state (int): Random state for repeatability. Default value is 42.
         eval_metric (str): The scoring metric used by RandomizedSearchCV. Default value is "f1_weighted"
         cv_folds (int): Number of folds for cross-validation. Default value is 5.
@@ -44,7 +44,7 @@ def find_best_params(
     random_search = RandomizedSearchCV(
         estimator=xgb_classifier,
         param_distributions=search_space,
-        verbose=2,
+        verbose=2,  # Prints model training info to console
         n_iter=n_iter,
         cv=cv_folds,
         scoring=eval_metric,
