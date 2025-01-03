@@ -1,6 +1,6 @@
 """
 This module ingests eeg/emg data, scores, and starting epochs, and outputs the feature table needed for model
-development. It takes in .wav and .txt files containing the eeg/emg data and scores/epochs. The  get_file_paths()
+development. It takes in .wav and .txt files containing the eeg/emg data and scores/epochs. The get_file_paths()
 function assumes a certain naming convention and directory structure of the files. In particular, the files should be
 named RAT_DAY_scores.txt, RAT_DAT_epoch.txt, and RAT_DAY.wav.
 
@@ -77,11 +77,15 @@ def get_file_paths(base_path: str) -> defaultdict:
             # split based on file naming convention (e.g. /171N_BL_epoch.txt)
             day = str.upper(os.path.basename(path).split("_")[1])
             path_dict[rat_id][day]["epoch"] = path
-        else:
+        elif "scores" in str(os.path.basename(path)):
             rat_id = str(os.path.basename(os.path.dirname(path)))
             # split based on file naming convention (e.g. /171N_BL_scores.txt)
             day = str.upper(os.path.basename(path).split("_")[1])
-            path_dict[rat_id][day][".txt"] = path
+            path_dict[rat_id][day]["scores"] = path
+        else:
+            raise ValueError(
+                f"'{os.path.basename(path)}': not a valid name. Txt files must have 'epoch' or 'scores' in the name"
+            )
 
     return path_dict
 
@@ -134,7 +138,7 @@ def calculate_features(file_paths: defaultdict) -> pd.DataFrame:
         for day in file_paths[rat_id]:
             print(day)
             data_path = file_paths[rat_id][day].get(".wav", None)
-            score_path = file_paths[rat_id][day].get(".txt", None)
+            score_path = file_paths[rat_id][day].get("scores", None)
             epoch_path = file_paths[rat_id][day].get("epoch", None)
 
             # read eeg and emg data from .wav file
@@ -146,10 +150,10 @@ def calculate_features(file_paths: defaultdict) -> pd.DataFrame:
                 with open(epoch_path, "r") as file:
                     start_epoch = int(file.readline().strip())
 
-                # make df_features. Add in columns for ID, day, and epoch
+            # make df_features. Add in columns for ID, day, and epoch
             df_features = sleep.generate_features(
                 data=df_data,
-                **({"start_epoch": start_epoch} if epoch_path is not None else {})
+                **({"start_epoch": start_epoch} if epoch_path is not None else {}),
             )
 
             df_features["ID"] = rat_id
