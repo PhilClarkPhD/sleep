@@ -1,3 +1,8 @@
+## TODO:
+- Light/dark: allow multiple blocks for light/dark with user-specified start + end
+- if user exits QInputDialog that opens from score_data(self), do not score the data!
+
+
 # 2024-07-21
 ## ADDED
 - `calculate_dark_phase_from_timestamp()` in `update_objects.py`
