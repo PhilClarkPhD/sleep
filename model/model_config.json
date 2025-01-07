@@ -1,10 +1,10 @@
 {
-  "model_version": "1.2.2",
+  "model_version": "1.2.3",
   "model_name": "XGBoost",
   "paths": {
     "artifacts_path": "/Users/phil/philclarkphd/sleep/model_artifacts",
-    "feature_store_table": "features_2024-09-07_15-42-15.csv",
-    "feature_store_directory": "/Users/phil/philclarkphd/sleep/feature_store/"
+    "feature_store_directory": "/Users/phil/philclarkphd/sleep/feature_store/",
+    "feature_store_table": "features_2025-01-02_22-20-56.csv"
   },
   "feature_cols": [
     "EEG_quantile_80",
@@ -37,5 +37,5 @@
   "cv_folds": 5,
   "n_iter": 50,
   "eval_metric": "f1_weighted",
-  "notes": "First model w/ V's data using Sophie's recommended representative epochs."
+  "notes": "Model using new data from the fixed sleep hardware."
 }

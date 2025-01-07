@@ -11,10 +11,10 @@ config_path = "/Users/phil/philclarkphd/sleep/model/model_config.json"
 config = load_config(config_path)
 
 ARTIFACT_PATH = (
-    "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.2.2/XGBoost_1.2.2.pkl"
+    "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.2.3/XGBoost_1.2.3.pkl"
 )
 
-TEST_DATA_PATH = "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.2.2/XGBoost_1.2.2_test_data.csv"
+TEST_DATA_PATH = "/Users/phil/philclarkphd/sleep/model_artifacts/XGBoost_1.2.3/XGBoost_1.2.3_test_data.csv"
 
 # Load artifacts
 model, metadata, encoder = joblib.load(ARTIFACT_PATH)
@@ -80,7 +80,7 @@ model_evaluation = f"""
 model_summary = """
 # Model Summary
 
-* Model run w/ V's data and new representative epochs.
+* Model run w/ Sophie's data from the fixed sleep hardware.
 """
 
 ## Build Model Card ##

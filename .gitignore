@@ -1,18 +1,14 @@
-# ignore environment-related files
-.tool-versions
+model_artifacts/*
+.direnv/
+.direnv/
+*model_config.json
+*fs_config.json
+*.DS_Store
 .envrc
-
-#random stuff
-logs*
-__*
-.DS*
 .idea/
-
-# jupyter notebooks
-*.ipynb_checkpoints*
-
-# data
-feature_store/
+*__pycache__*
 training_data/
-model_artifacts/
+feature_store/
+logs.log
 model_cards/
+*.ipynb_checkpoints
