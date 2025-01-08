@@ -3,8 +3,7 @@
 
 from numpy.typing import ArrayLike
 import numpy as np
-from scipy.fft import rfft, rfftfreq
-import scipy.spatial.transform._rotation_groups  # keep this for compiling
+from scipy.fft import rfft
 from scipy.integrate import simps
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
@@ -369,22 +368,31 @@ def plot_confusion_matrix(
     return cm
 
 
-def modify_scores(predicted: ArrayLike) -> list:
-    # Errors out unless converted to list first
-    predicted = predicted.tolist()
+def apply_rule_based_filter(predicted):
+    predicted = predicted.tolist()  # Convert to a list for easier manipulation
 
-    def replace_val(idx):
-        try:
-            if (predicted[idx - 2 : idx] == predicted[idx + 1 : idx + 3]) and (
-                predicted[idx] != "REM"
-            ):
-                return predicted[idx - 1]
-            elif (predicted[idx - 1] == predicted[idx - 2] == "Wake") and (
-                predicted[idx] == "REM"
-            ):
-                return "Wake"
-        except Exception:
-            pass
-        return predicted[idx]
+    # Iterate over the list and apply rules
+    for idx in range(2, len(predicted) - 2):
+        is_single_epoch = predicted[idx - 2 : idx] == predicted[idx + 1 : idx + 3]
+        is_double_epoch = predicted[idx - 2 : idx] == predicted[idx + 2 : idx + 4]
+        is_isolated_by_2_and_1 = (
+            predicted[idx - 2] == predicted[idx - 1] == predicted[idx + 1]
+        )
+        is_rem_after_wake = predicted[idx] == "REM" and predicted[idx - 2 : idx] == [
+            "Wake",
+            "Wake",
+        ]
 
-    return [replace_val(idx) for idx in range(len(predicted))]
+        # Rule 1: If "Wake, Wake, REM", convert "REM" to "Wake"
+        if is_rem_after_wake:
+            predicted[idx] = "Wake"
+
+        # Rule 2: If the element is isolated by two identical elements on both sides
+        if is_single_epoch or is_double_epoch:
+            predicted[idx] = predicted[idx - 1]
+
+        # Rule 3: Isolated bout before a legitimate change in sleep state
+        elif is_isolated_by_2_and_1:
+            predicted[idx] = predicted[idx - 1]
+
+    return predicted

@@ -11,7 +11,7 @@ from sklearn.metrics import f1_score
 import pandas as pd
 import os
 from utils.load_config import load_config
-from data_processing.sleep_functions import modify_scores
+from data_processing.sleep_functions import apply_rule_based_filter
 
 # Load the model config
 config_path = "/Users/phil/philclarkphd/sleep/model/model_config.json"
@@ -78,14 +78,9 @@ best_params, search_duration = train_model.find_best_params(
 
 # Train model on test data w/ best params
 model_0, y_test_pred, *_ = train_model.train_model(X_test, y_test, best_params)
-y_test_pred_filtered = modify_scores(y_test_pred)
 
 # Evaluate Model
 train_feature_importance = model_0.feature_importances_
-if config["use_rule_based_filter"]:
-    train_score = f1_score(y_test, y_test_pred_filtered, average="weighted")
-else:
-    train_score = f1_score(y_test, y_test_pred, average="weighted")
 
 # Train final model
 X = df_features[feature_cols]
@@ -94,12 +89,18 @@ y = df_features[target_col]
 final_model, y_pred, time_to_fit, label_encoder = train_model.train_model(
     X, y, best_params
 )
-y_pred_filtered = modify_scores(y_pred)
+
 
 if config["use_rule_based_filter"]:
+    y_pred_filtered = apply_rule_based_filter(y_pred)
     model_score = f1_score(y, y_pred_filtered, average="weighted")
+
+    y_test_pred_filtered = apply_rule_based_filter(y_test_pred)
+    train_score = f1_score(y_test, y_test_pred_filtered, average="weighted")
 else:
     model_score = f1_score(y, y_pred, average="weighted")
+    train_score = f1_score(y_test, y_test_pred, average="weighted")
+
 current_time = datetime.datetime.today()
 
 # Make any notes

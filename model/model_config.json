@@ -1,5 +1,5 @@
 {
-  "model_version": "1.2.3",
+  "model_version": "1.2.4",
   "model_name": "XGBoost",
   "paths": {
     "artifacts_path": "/Users/phil/philclarkphd/sleep/model_artifacts",
@@ -37,5 +37,5 @@
   "cv_folds": 5,
   "n_iter": 50,
   "eval_metric": "f1_weighted",
-  "notes": "Model using new data from the fixed sleep hardware."
+  "notes": "Test updated rule-based filter"
 }

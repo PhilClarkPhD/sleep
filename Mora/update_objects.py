@@ -568,10 +568,9 @@ class Funcs(QWidget):
 
         predictions = self.Model.model.predict(features)
         decoded_predictions = self.Model.label_encoder.inverse_transform(predictions)
-        self.Data.scores = decoded_predictions
 
-        # temporarily deprecating modify_scores until we figure out the best way to implement it
-        # scores = sleep.modify_scores(decoded_predictions)
+        # Apply rule based filter by default
+        self.Data.scores = sleep.apply_rule_based_filter(decoded_predictions)
 
         self.Data.epoch_dict = dict(zip(self.Data.epoch_list, self.Data.scores))
         self.update_plots()
