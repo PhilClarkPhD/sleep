@@ -1,4 +1,4 @@
-model_artifacts/*
+model_artifacts/**/*.csv
 .direnv/
 .direnv/
 *model_config.json
