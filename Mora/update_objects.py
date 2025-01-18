@@ -234,7 +234,7 @@ class Funcs(QWidget):
         if dialog.exec_() == QDialog.Accepted:
             self.General.timestamp = dialog.getDateTime().toPyDateTime()
             self.General.timestamp_selected = True
-            self.getDarkStartEnd()
+            self.getBlockStartEnd()
         else:
             QMessageBox.information(
                 self, "Dialog Canceled", "No date and time selected."
@@ -249,10 +249,10 @@ class Funcs(QWidget):
         }
         return xlabels
 
-    def getDarkStartEnd(self):
+    def getBlockStartEnd(self):
         dialog = self.LightDark_Dialog
         if dialog.exec_() == QDialog.Accepted:
-            dark_start_time, dark_end_time = dialog.getDarkStartEnd()
+            dark_start_time, dark_end_time = dialog.getBlockStartEnd()
             self.General.DarkTimeStart = dark_start_time.toPyDateTime()
             self.General.DarkTimeEnd = dark_end_time.toPyDateTime()
 

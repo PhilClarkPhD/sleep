@@ -59,14 +59,14 @@ class LightDark_Dialog(QDialog):
         self.setGeometry(100, 100, 500, 100)
 
         layout = QVBoxLayout()
-        start_time_label = QLabel("Enter start time of dark period")
+        start_time_label = QLabel("Enter start time of first block")
         self.DarkTimeStart = QDateTimeEdit(self)
         self.DarkTimeStart.setDateTime(QDateTime.currentDateTime())
         self.DarkTimeStart.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
         layout.addWidget(start_time_label)
         layout.addWidget(self.DarkTimeStart)
 
-        end_time_label = QLabel("Enter end time of dark period")
+        end_time_label = QLabel("Enter end time of first block")
         self.DarkTimeEnd = QDateTimeEdit(self)
         self.DarkTimeEnd.setDateTime(QDateTime.currentDateTime())
         self.DarkTimeEnd.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
@@ -82,16 +82,23 @@ class LightDark_Dialog(QDialog):
 
         self.setLayout(layout)
 
-    def getDarkStartEnd(self):
-        self.validateDarkStartEnd()
+    def getBlockStartEnd(self):
+        self.validateBlockStartEnd()
         return self.DarkTimeStart.dateTime(), self.DarkTimeEnd.dateTime()
 
-    def validateDarkStartEnd(self):
+    def validateBlockStartEnd(self):
         if (
             not self.DarkTimeStart.dateTime().toPyDateTime()
             < self.DarkTimeEnd.dateTime().toPyDateTime()
         ):
             raise ValueError("Start of dark phase must come before end of dark period")
+
+    def add_block(self):
+
+        # Light/Dark dropdown
+
+        #
+
 
 
 class Data(QWidget):
