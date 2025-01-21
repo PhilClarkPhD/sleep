@@ -104,15 +104,22 @@ class Funcs(QWidget):
         ]
         return timestamp_series
 
-    def calculate_dark_phase_from_timestamp(self, timestamp_series) -> list:
+    def apply_light_dark_labels(self, timestamp_series) -> list:
         timestamp_series = pd.to_datetime(timestamp_series)
-        mask = (timestamp_series >= self.General.DarkTimeStart) & (
-            timestamp_series <= self.General.DarkTimeEnd
-        )
-        dark_phase_series = pd.Series(0, index=timestamp_series.index)
-        dark_phase_series[mask] = 1
+        labels = pd.Series(index=timestamp_series.index, dtype=str)
 
-        return dark_phase_series
+        current = timestamp_series.min()
+        for id, block in self.General.LightDarkLabels.blocks.items():
+            start = current
+            end = current + block.duration
+
+            mask = (timestamp_series >= start) & (timestamp_series < end)
+            labels.loc[mask] = block.phase
+
+            current = end
+        labels = labels.fillna("Unlabeled")
+
+        return labels
 
     def export_scores(self) -> None:
         name = str(self.name_file())
@@ -130,8 +137,8 @@ class Funcs(QWidget):
         if self.General.timestamp_selected:
             score_export["timestamp"] = self.calculate_timestamp_from_epoch()
 
-        if self.General.LightDark_input:
-            score_export["dark_phase"] = self.calculate_dark_phase_from_timestamp(
+        if self.General.LightDarkLabels:
+            score_export["light_dark"] = self.apply_light_dark_labels(
                 score_export["timestamp"]
             )
 
@@ -234,7 +241,7 @@ class Funcs(QWidget):
         if dialog.exec_() == QDialog.Accepted:
             self.General.timestamp = dialog.getDateTime().toPyDateTime()
             self.General.timestamp_selected = True
-            self.getDarkStartEnd()
+            self.getLightDarkLabels()
         else:
             QMessageBox.information(
                 self, "Dialog Canceled", "No date and time selected."
@@ -249,19 +256,14 @@ class Funcs(QWidget):
         }
         return xlabels
 
-    def getDarkStartEnd(self):
+    def getLightDarkLabels(self):
         dialog = self.LightDark_Dialog
         if dialog.exec_() == QDialog.Accepted:
-            dark_start_time, dark_end_time = dialog.getDarkStartEnd()
-            self.General.DarkTimeStart = dark_start_time.toPyDateTime()
-            self.General.DarkTimeEnd = dark_end_time.toPyDateTime()
-
-            # Validation checks have passed, set LightDark indicator to True
-            self.General.LightDark_input = True
-
+            self.General.LightDarkLabels = dialog.get_blocks()
         else:
+            self.General.LightDarkLabels = None
             QMessageBox.information(
-                self, "Dialog Canceled", "Dark phase start and end not selected."
+                self, "Dialog Canceled", "Light/Dark phases not applied."
             )
 
     def load_data(self) -> None:

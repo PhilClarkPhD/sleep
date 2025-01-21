@@ -1,9 +1,12 @@
+import datetime
+
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QDateTime
 import pyqtgraph as pg
 import os
 import numpy as np
 import pandas as pd
+from blocks import TimeBlocks, TimeBlockUnit
 
 
 class General(QWidget):
@@ -19,10 +22,8 @@ class General(QWidget):
         self.TIMESTAMP_FORMAT_PLOTTING = "%Y-%m-%d\n%H:%M:%S"
         self.TIMESTAMP_FORMAT_EXPORTING = "%Y-%m-%d %H:%M:%S"
 
-        # Dark Period start and end times
-        self.LightDark_input = False
-        self.DarkTimeStart = None
-        self.DarkTimeEnd = None
+        # Light/Dark start and end times
+        self.LightDarkLabels = None
 
 
 class Timestamp_Dialog(QDialog):
@@ -55,43 +56,128 @@ class LightDark_Dialog(QDialog):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Start and End Time of Dark periods")
-        self.setGeometry(100, 100, 500, 100)
+        self.setWindowTitle("Start and End Time of Light/Dark Periods")
+        self.setGeometry(100, 100, 500, 300)
 
-        layout = QVBoxLayout()
-        start_time_label = QLabel("Enter start time of dark period")
-        self.DarkTimeStart = QDateTimeEdit(self)
-        self.DarkTimeStart.setDateTime(QDateTime.currentDateTime())
-        self.DarkTimeStart.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
-        layout.addWidget(start_time_label)
-        layout.addWidget(self.DarkTimeStart)
+        self.layout = QVBoxLayout()
 
-        end_time_label = QLabel("Enter end time of dark period")
-        self.DarkTimeEnd = QDateTimeEdit(self)
-        self.DarkTimeEnd.setDateTime(QDateTime.currentDateTime())
-        self.DarkTimeEnd.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
-        layout.addWidget(end_time_label)
-        layout.addWidget(self.DarkTimeEnd)
+        # Container for blocks
+        self.blocks_layout = QVBoxLayout()
+        self.layout.addLayout(self.blocks_layout)
 
+        # Add the first 3 blocks initially
+        self.add_block()
+        self.add_block()
+        self.add_block()
+
+        #  Add block
+        self.add_block_button = QPushButton("Add Block")
+        self.add_block_button.clicked.connect(self.add_block)
+        self.layout.addWidget(self.add_block_button)
+
+        # Remove block
+        self.remove_block_button = QPushButton("Remove Block")
+        self.remove_block_button.clicked.connect(self.remove_block)
+        self.layout.addWidget(self.remove_block_button)
+
+        # Dialog buttons
         self.buttonBox = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self
         )
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
-        layout.addWidget(self.buttonBox)
+        self.layout.addWidget(self.buttonBox)
 
-        self.setLayout(layout)
+        self.setLayout(self.layout)
 
-    def getDarkStartEnd(self):
-        self.validateDarkStartEnd()
-        return self.DarkTimeStart.dateTime(), self.DarkTimeEnd.dateTime()
+    def add_block(self):
+        # Determine block number
+        block_number = self.blocks_layout.count() + 1
 
-    def validateDarkStartEnd(self):
-        if (
-            not self.DarkTimeStart.dateTime().toPyDateTime()
-            < self.DarkTimeEnd.dateTime().toPyDateTime()
-        ):
-            raise ValueError("Start of dark phase must come before end of dark period")
+        # Create a widget for the block
+        block_widget = QWidget()
+        block_layout = QVBoxLayout()
+
+        # Add block number label at the top
+        block_label = QLabel(f"<b>Block {block_number}</b>")
+        block_layout.addWidget(block_label)
+
+        # Create horizontal layout for block details
+        details_layout = QHBoxLayout()
+
+        # Duration inputs: Hours, Minutes, Seconds
+        duration_label = QLabel("Duration (H:M:S):")
+        hours_spinbox = QSpinBox()
+        hours_spinbox.setRange(0, 23)  # Allow up to 23 hours
+        hours_spinbox.setSuffix(" h")
+        hours_spinbox.setValue(0)
+
+        minutes_spinbox = QSpinBox()
+        minutes_spinbox.setRange(0, 59)  # Allow up to 59 minutes
+        minutes_spinbox.setSuffix(" m")
+        minutes_spinbox.setValue(0)
+
+        seconds_spinbox = QSpinBox()
+        seconds_spinbox.setRange(0, 59)  # Allow up to 59 seconds
+        seconds_spinbox.setSuffix(" s")
+        seconds_spinbox.setValue(0)
+
+        details_layout.addWidget(duration_label)
+        details_layout.addWidget(hours_spinbox)
+        details_layout.addWidget(minutes_spinbox)
+        details_layout.addWidget(seconds_spinbox)
+
+        # Light/Dark dropdown
+        dropdown_label = QLabel("Phase:")
+        dropdown = QComboBox()
+        dropdown.addItems(["Light", "Dark"])
+        details_layout.addWidget(dropdown_label)
+        details_layout.addWidget(dropdown)
+
+        # Add the details layout to the block layout below the title
+        block_layout.addLayout(details_layout)
+
+        # Set layout for the block widget and add it to the main layout
+        block_widget.setLayout(block_layout)
+        self.blocks_layout.addWidget(block_widget)
+
+    def remove_block(self):
+        if self.blocks_layout.count() > 0:
+            last_block = self.blocks_layout.itemAt(
+                self.blocks_layout.count() - 1
+            ).widget()
+            if last_block:
+                self.blocks_layout.removeWidget(last_block)
+                last_block.deleteLater()
+
+    def get_blocks(self):
+        # Retrieve data from all blocks
+        blocks = {}
+        for i in range(self.blocks_layout.count()):
+            block_widget = self.blocks_layout.itemAt(i).widget()
+            if block_widget:
+                hours = block_widget.findChildren(QSpinBox)[0].value()
+                minutes = block_widget.findChildren(QSpinBox)[1].value()
+                seconds = block_widget.findChildren(QSpinBox)[2].value()
+
+                duration = datetime.timedelta(
+                    hours=hours, minutes=minutes, seconds=seconds
+                )
+
+                dropdown = block_widget.findChildren(QComboBox)[0]
+                phase = dropdown.currentText()
+
+                block = TimeBlockUnit(duration=duration, phase=phase)
+
+                blocks[i] = block
+        return TimeBlocks(blocks=blocks)
+
+    def on_ok_clicked(self):
+        try:
+            self.get_blocks()
+            self.accept()
+        except ValueError as e:
+            QMessageBox.critical(self, "Validation Error", str(e))
 
 
 class Data(QWidget):
@@ -200,3 +286,18 @@ class Model(QWidget):
         self.model = np.NaN
         self.params = {}
         self.label_encoder = {}
+
+
+if __name__ == "__main__":
+    import sys
+    from PyQt5.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+    dialog = LightDark_Dialog()
+
+    if dialog.exec() == QDialog.Accepted:
+        try:
+            blocks = dialog.get_blocks()
+            print("Blocks:", blocks)
+        except ValueError as e:
+            print("Error:", e)
