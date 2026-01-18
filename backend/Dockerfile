@@ -17,8 +17,12 @@ COPY app/ ./app/
 # Copy model artifacts
 COPY models/ ./models/
 
-# Expose port
+# Copy and prepare startup script
+COPY start.sh .
+RUN chmod +x start.sh
+
+# Expose port (informational)
 EXPOSE 8000
 
-# Run the application on port 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run via startup script (handles Railway's PORT variable)
+CMD ["./start.sh"]
