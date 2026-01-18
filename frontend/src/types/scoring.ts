@@ -60,6 +60,16 @@ export interface HealthResponse {
   version: string;
 }
 
+// Light/Dark phase definition
+export type PhaseType = 'light' | 'dark';
+
+export interface LightDarkPhase {
+  id: string;           // Unique identifier for React keys
+  type: PhaseType;
+  startTime: string;    // HH:MM format (24-hour)
+  endTime: string;      // HH:MM format (24-hour)
+}
+
 // Color mapping for sleep states
 export const SLEEP_COLORS: Record<SleepState, string> = {
   'Wake': '#f59e0b',       // amber-500

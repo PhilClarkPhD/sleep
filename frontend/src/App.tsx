@@ -10,6 +10,7 @@ import { Hypnogram } from './components/Hypnogram';
 import { ScoringResults } from './components/ScoringResults';
 import { EpochViewer } from './components/EpochViewer';
 import { ExportPanel } from './components/ExportPanel';
+import { RecordingSettings } from './components/RecordingSettings';
 import { useAppStore } from './store/useAppStore';
 import { checkHealth, getModelInfo } from './api/sleepApi';
 
@@ -94,10 +95,13 @@ function App() {
             {/* Hypnogram - full width */}
             <Hypnogram />
 
-            {/* Summary statistics and export side by side */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Summary statistics, recording settings, and export */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Summary statistics */}
               <ScoringResults />
+
+              {/* Recording settings (timestamp, light/dark phases) */}
+              <RecordingSettings />
 
               {/* Import/Export panel */}
               <ExportPanel />

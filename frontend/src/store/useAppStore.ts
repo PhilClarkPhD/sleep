@@ -6,7 +6,7 @@
  */
 
 import { create } from 'zustand';
-import type { EpochScore, ScoringStats, ModelInfo, SignalData, SleepState } from '../types/scoring';
+import type { EpochScore, ScoringStats, ModelInfo, SignalData, SleepState, LightDarkPhase, PhaseType } from '../types/scoring';
 
 export type UploadState = 'idle' | 'uploading' | 'processing' | 'complete' | 'error';
 
@@ -40,6 +40,10 @@ interface AppState {
   editedEpochs: Set<number>;  // Tracks which epochs have been manually edited
   hasUnsavedChanges: boolean;
 
+  // Recording metadata
+  recordingStartTime: string | null;  // ISO datetime string
+  lightDarkPhases: LightDarkPhase[];
+
   // Actions (functions to update state)
   setUploadState: (state: UploadState) => void;
   setUploadProgress: (progress: number) => void;
@@ -67,6 +71,14 @@ interface AppState {
   clearAllScores: () => void;
   importScores: (scores: EpochScore[]) => void;
 
+  // Recording metadata actions
+  setRecordingStartTime: (time: string | null) => void;
+  addLightDarkPhase: (type: PhaseType, startTime: string, endTime: string) => void;
+  updateLightDarkPhase: (id: string, updates: Partial<Omit<LightDarkPhase, 'id'>>) => void;
+  removeLightDarkPhase: (id: string) => void;
+  getPhaseForEpoch: (epochIndex: number) => PhaseType | null;
+  getTimestampForEpoch: (epochIndex: number) => Date | null;
+
   reset: () => void;
 }
 
@@ -86,6 +98,8 @@ const initialState = {
   windowSize: 5,
   editedEpochs: new Set<number>(),
   hasUnsavedChanges: false,
+  recordingStartTime: null as string | null,
+  lightDarkPhases: [] as LightDarkPhase[],
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -258,8 +272,80 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
 
+  // Recording metadata actions
+  setRecordingStartTime: (recordingStartTime) => set({ recordingStartTime }),
+
+  addLightDarkPhase: (type, startTime, endTime) => {
+    const { lightDarkPhases } = get();
+    const newPhase: LightDarkPhase = {
+      id: `phase-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      startTime,
+      endTime,
+    };
+    set({ lightDarkPhases: [...lightDarkPhases, newPhase] });
+  },
+
+  updateLightDarkPhase: (id, updates) => {
+    const { lightDarkPhases } = get();
+    set({
+      lightDarkPhases: lightDarkPhases.map(phase =>
+        phase.id === id ? { ...phase, ...updates } : phase
+      ),
+    });
+  },
+
+  removeLightDarkPhase: (id) => {
+    const { lightDarkPhases } = get();
+    set({ lightDarkPhases: lightDarkPhases.filter(phase => phase.id !== id) });
+  },
+
+  getTimestampForEpoch: (epochIndex) => {
+    const { recordingStartTime, epochs } = get();
+    if (!recordingStartTime || epochIndex < 0 || epochIndex >= epochs.length) {
+      return null;
+    }
+    const startDate = new Date(recordingStartTime);
+    const epochOffsetMs = epochs[epochIndex].timestamp_seconds * 1000;
+    return new Date(startDate.getTime() + epochOffsetMs);
+  },
+
+  getPhaseForEpoch: (epochIndex) => {
+    const { lightDarkPhases } = get();
+    const epochTimestamp = get().getTimestampForEpoch(epochIndex);
+    if (!epochTimestamp || lightDarkPhases.length === 0) {
+      return null;
+    }
+
+    const epochHour = epochTimestamp.getHours();
+    const epochMinute = epochTimestamp.getMinutes();
+    const epochTimeMinutes = epochHour * 60 + epochMinute;
+
+    for (const phase of lightDarkPhases) {
+      const [startH, startM] = phase.startTime.split(':').map(Number);
+      const [endH, endM] = phase.endTime.split(':').map(Number);
+      const startMinutes = startH * 60 + startM;
+      const endMinutes = endH * 60 + endM;
+
+      // Handle phases that span midnight
+      if (startMinutes <= endMinutes) {
+        // Normal case: phase within same day
+        if (epochTimeMinutes >= startMinutes && epochTimeMinutes < endMinutes) {
+          return phase.type;
+        }
+      } else {
+        // Phase spans midnight (e.g., 22:00 - 06:00)
+        if (epochTimeMinutes >= startMinutes || epochTimeMinutes < endMinutes) {
+          return phase.type;
+        }
+      }
+    }
+    return null;
+  },
+
   reset: () => set({
     ...initialState,
     editedEpochs: new Set<number>(),
+    lightDarkPhases: [],
   }),
 }));

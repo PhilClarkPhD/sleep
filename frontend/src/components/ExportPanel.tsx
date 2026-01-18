@@ -19,8 +19,12 @@ export function ExportPanel() {
     summary,
     fileName,
     hasUnsavedChanges,
+    recordingStartTime,
+    lightDarkPhases,
     importScores,
     clearAllScores,
+    getTimestampForEpoch,
+    getPhaseForEpoch,
   } = useAppStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -29,12 +33,38 @@ export function ExportPanel() {
     return null;
   }
 
+  // Helper to format date for CSV
+  const formatTimestamp = (date: Date | null): string => {
+    if (!date) return '';
+    return date.toISOString().replace('T', ' ').slice(0, 19);
+  };
+
   // Export scores as CSV
   const handleExportScores = () => {
-    const header = 'epoch,score,timestamp_seconds\n';
-    const rows = epochs.map(e => `${e.epoch},${e.score},${e.timestamp_seconds}`).join('\n');
-    const csv = header + rows;
+    const hasTimestamp = !!recordingStartTime;
+    const hasPhases = lightDarkPhases.length > 0;
 
+    // Build header based on available data
+    let header = 'epoch,score,timestamp_seconds';
+    if (hasTimestamp) header += ',datetime';
+    if (hasPhases) header += ',phase';
+    header += '\n';
+
+    // Build rows with optional columns
+    const rows = epochs.map((e, i) => {
+      let row = `${e.epoch},${e.score},${e.timestamp_seconds}`;
+      if (hasTimestamp) {
+        const timestamp = getTimestampForEpoch(i);
+        row += `,${formatTimestamp(timestamp)}`;
+      }
+      if (hasPhases) {
+        const phase = getPhaseForEpoch(i);
+        row += `,${phase || ''}`;
+      }
+      return row;
+    }).join('\n');
+
+    const csv = header + rows;
     const baseName = fileName?.replace('.wav', '') || 'scores';
     downloadFile(csv, `${baseName}_scores.csv`, 'text/csv');
   };
@@ -43,13 +73,46 @@ export function ExportPanel() {
   const handleExportBreakdown = () => {
     if (!summary) return;
 
-    const header = 'Stage,Epochs,Proportion\n';
-    const rows = [
-      `Wake,${summary.wake_count},${(summary.wake_percent / 100).toFixed(4)}`,
-      `Non REM,${summary.nrem_count},${(summary.nrem_percent / 100).toFixed(4)}`,
-      `REM,${summary.rem_count},${(summary.rem_percent / 100).toFixed(4)}`,
-    ].join('\n');
-    const csv = header + rows;
+    const hasPhases = lightDarkPhases.length > 0;
+    let csv = '';
+
+    // Overall summary
+    csv += 'Stage,Epochs,Proportion\n';
+    csv += `Wake,${summary.wake_count},${(summary.wake_percent / 100).toFixed(4)}\n`;
+    csv += `Non REM,${summary.nrem_count},${(summary.nrem_percent / 100).toFixed(4)}\n`;
+    csv += `REM,${summary.rem_count},${(summary.rem_percent / 100).toFixed(4)}\n`;
+
+    // Phase-specific breakdown if phases are defined
+    if (hasPhases && recordingStartTime) {
+      csv += '\n';
+
+      // Calculate counts per phase
+      const phaseCounts: Record<string, Record<string, number>> = {};
+      for (const phase of lightDarkPhases) {
+        phaseCounts[phase.type] = { Wake: 0, 'Non REM': 0, REM: 0, total: 0 };
+      }
+
+      epochs.forEach((e, i) => {
+        const phase = getPhaseForEpoch(i);
+        if (phase && phaseCounts[phase]) {
+          phaseCounts[phase].total++;
+          if (e.score === 'Wake' || e.score === 'Non REM' || e.score === 'REM') {
+            phaseCounts[phase][e.score]++;
+          }
+        }
+      });
+
+      // Add phase-specific sections
+      for (const [phaseName, counts] of Object.entries(phaseCounts)) {
+        if (counts.total > 0) {
+          csv += `\n${phaseName.charAt(0).toUpperCase() + phaseName.slice(1)} Phase\n`;
+          csv += 'Stage,Epochs,Proportion\n';
+          csv += `Wake,${counts.Wake},${(counts.Wake / counts.total).toFixed(4)}\n`;
+          csv += `Non REM,${counts['Non REM']},${(counts['Non REM'] / counts.total).toFixed(4)}\n`;
+          csv += `REM,${counts.REM},${(counts.REM / counts.total).toFixed(4)}\n`;
+        }
+      }
+    }
 
     const baseName = fileName?.replace('.wav', '') || 'breakdown';
     downloadFile(csv, `${baseName}_breakdown.csv`, 'text/csv');
