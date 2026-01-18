@@ -5,14 +5,17 @@ This API provides endpoints for scoring EEG/EMG recordings for sleep states.
 """
 
 import logging
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.v1.router import router as api_v1_router
 from app.core.config import settings
 from app.core.model_loader import model_manager
+from app.core.security import check_rate_limit, get_client_ip, log_request
 
 # Configure logging
 logging.basicConfig(
@@ -83,11 +86,36 @@ All epochs are 10 seconds. The epoch index corresponds to:
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify allowed origins
+    allow_origins=settings.CORS_ORIGINS_LIST,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def security_middleware(request: Request, call_next):
+    """Middleware for rate limiting and request logging."""
+    start_time = time.time()
+
+    # Check rate limit (if enabled)
+    try:
+        await check_rate_limit(request)
+    except Exception as e:
+        return JSONResponse(
+            status_code=429,
+            content={"detail": str(e)},
+        )
+
+    # Process request
+    response = await call_next(request)
+
+    # Log request
+    duration_ms = (time.time() - start_time) * 1000
+    log_request(request, response.status_code, duration_ms)
+
+    return response
+
 
 # Include API router
 app.include_router(api_v1_router, prefix=settings.API_V1_PREFIX)

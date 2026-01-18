@@ -10,7 +10,7 @@
 | Phase 4: Testing | ✅ **COMPLETED** | Unit + integration tests |
 | Phase 5: CLI Tool | ✅ **COMPLETED** | `mora score` command |
 | Phase 6: Deployment | ✅ **COMPLETED** | Railway + Cloudflare Pages live |
-| Phase 7: Security | ⏸️ Pending | Not started |
+| Phase 7: Security | ✅ **COMPLETED** | API keys, rate limiting, logging |
 | Phase 8: PyQt5 Deprecation | ⏸️ Pending | Not started |
 
 **Branch:** `claude/refactor`
@@ -20,7 +20,7 @@
 - Backend: https://sleep-production.up.railway.app
 - API Docs: https://sleep-production.up.railway.app/docs
 
-**Next step:** Choose next phase (Model Validation, Testing, or Security)
+**Next step:** Phase 8 (PyQt5 Deprecation) or deploy security changes
 
 ---
 
@@ -508,8 +508,8 @@ curl -X POST http://localhost:8000/api/v1/score \
 ```
 
 ### Known Limitations (Current Implementation)
-1. No authentication/rate limiting (Phase 7)
+1. ~~No authentication/rate limiting~~ ✅ Implemented in Phase 7 (optional, disabled by default)
 2. No async job queue for large files (files process synchronously)
 3. No EEG/EMG signal plots in frontend (only hypnogram)
 4. No manual epoch editing in frontend
-5. No batch processing yet
+5. No batch processing in web UI (CLI supports batch via `mora batch`)

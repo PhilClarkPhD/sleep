@@ -3,11 +3,13 @@ Scoring API endpoints.
 """
 
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from app.core.config import settings
 from app.core.model_loader import ModelManager, get_model_manager
+from app.core.security import verify_api_key
 from app.schemas.scoring import (
     ErrorResponse,
     FeaturesResponse,
@@ -35,6 +37,7 @@ async def score_file(
         description="Baseline epoch index for normalization (should be a Wake epoch)",
     ),
     model_manager: ModelManager = Depends(get_model_manager),
+    client_id: Optional[str] = Depends(verify_api_key),
 ):
     """
     Score a WAV file for sleep states.
@@ -108,6 +111,7 @@ async def extract_features(
         description="Baseline epoch index for normalization",
     ),
     model_manager: ModelManager = Depends(get_model_manager),
+    client_id: Optional[str] = Depends(verify_api_key),
 ):
     """
     Extract features from a WAV file without scoring.
