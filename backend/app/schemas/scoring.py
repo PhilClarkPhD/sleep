@@ -25,6 +25,18 @@ class EpochScore(BaseModel):
     timestamp_seconds: float = Field(description="Start time of epoch in seconds")
 
 
+class SignalData(BaseModel):
+    """Signal data for visualization (downsampled for efficiency)."""
+
+    eeg: List[List[float]] = Field(description="EEG signal per epoch (downsampled)")
+    emg: List[List[float]] = Field(description="EMG signal per epoch (downsampled)")
+    power_spectrum: List[List[float]] = Field(description="Power spectrum per epoch (0-50Hz)")
+    time_axis: List[float] = Field(description="Time points within epoch (seconds)")
+    freq_axis: List[float] = Field(description="Frequency axis for power spectrum (Hz)")
+    delta_power: List[float] = Field(description="Relative delta power per epoch")
+    theta_power: List[float] = Field(description="Relative theta power per epoch")
+
+
 class ScoringStats(BaseModel):
     """Summary statistics for a scoring session."""
 
@@ -48,6 +60,10 @@ class ScoringResponse(BaseModel):
     model_version: str
     samplerate: int
     baseline_epoch: int
+    signal_data: Optional[SignalData] = Field(
+        default=None,
+        description="Signal data for visualization (included when include_signals=true)"
+    )
 
 
 class FeaturesResponse(BaseModel):

@@ -43,8 +43,8 @@ export function FileUpload() {
     setUploadProgress(0);
 
     try {
-      // Score the file
-      const result = await scoreFile(file, baselineEpoch, (progress) => {
+      // Score the file with signal data for visualization
+      const result = await scoreFile(file, baselineEpoch, true, (progress) => {
         setUploadProgress(progress);
         if (progress === 100) {
           setUploadState('processing');
@@ -52,7 +52,13 @@ export function FileUpload() {
       });
 
       if (result.success) {
-        setScoringResults(result.epochs, result.summary, result.model_version, result.samplerate);
+        setScoringResults(
+          result.epochs,
+          result.summary,
+          result.model_version,
+          result.samplerate,
+          result.signal_data
+        );
       } else {
         setError('Scoring failed');
       }

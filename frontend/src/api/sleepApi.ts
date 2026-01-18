@@ -40,16 +40,19 @@ export async function getModelInfo(): Promise<ModelInfo> {
  *
  * @param file - The WAV file to score
  * @param startEpoch - Baseline epoch for normalization (default: 2)
+ * @param includeSignals - Whether to include signal data for visualization (default: true)
  * @param onProgress - Optional callback for upload progress (0-100)
  */
 export async function scoreFile(
   file: File,
   startEpoch: number = 2,
+  includeSignals: boolean = true,
   onProgress?: (percent: number) => void
 ): Promise<ScoringResponse> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('start_epoch', startEpoch.toString());
+  formData.append('include_signals', includeSignals.toString());
 
   // Use XMLHttpRequest for progress tracking
   return new Promise((resolve, reject) => {

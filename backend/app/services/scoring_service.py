@@ -4,8 +4,8 @@ Scoring service - orchestrates the complete scoring pipeline.
 
 import io
 import logging
-from dataclasses import dataclass
-from typing import List, Tuple
+from dataclasses import dataclass, field
+from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ from scipy.io import wavfile
 from app.core.config import settings
 from app.core.model_loader import ModelManager
 from app.ml import sleep_functions as sleep
-from app.schemas.scoring import EpochScore, ScoringResponse, ScoringStats
+from app.schemas.scoring import EpochScore, SignalData, ScoringResponse, ScoringStats
 
 logger = logging.getLogger(__name__)
 
@@ -27,13 +27,99 @@ class ScoringResult:
     summary: ScoringStats
     samplerate: int
     baseline_epoch: int
+    signal_data: Optional[SignalData] = None
 
 
 class ScoringService:
     """Handles the complete scoring pipeline."""
 
+    # Number of samples per epoch for visualization (downsample from 10000 to 500)
+    DISPLAY_SAMPLES_PER_EPOCH = 500
+
     def __init__(self, model_manager: ModelManager):
         self.model_manager = model_manager
+
+    def _downsample_signal(self, signal: np.ndarray, target_samples: int) -> List[float]:
+        """Downsample a signal to target number of samples using decimation."""
+        if len(signal) <= target_samples:
+            return signal.tolist()
+        # Use simple decimation (take every nth sample)
+        step = len(signal) // target_samples
+        return signal[::step][:target_samples].tolist()
+
+    def extract_signal_data(
+        self,
+        df: pd.DataFrame,
+        samplerate: int,
+        start_epoch: int = 2,
+    ) -> SignalData:
+        """
+        Extract signal data for visualization.
+
+        Args:
+            df: DataFrame with 'eeg' and 'emg' columns
+            samplerate: Sample rate in Hz
+            start_epoch: Baseline epoch for feature computation
+
+        Returns:
+            SignalData with downsampled signals and power spectra
+        """
+        epoch_duration = settings.EPOCH_DURATION_SECONDS
+        samples_per_epoch = samplerate * epoch_duration
+        n_epochs = len(df) // samples_per_epoch
+
+        # Compute power spectra
+        eeg_power, emg_power = sleep.compute_power(df, window=epoch_duration, samplerate=samplerate)
+        smoothed_eeg, _ = sleep.smooth_signal(eeg_power, emg_power)
+        rel_power = sleep.compute_relative_power(smoothed_eeg)
+
+        # Extract signals per epoch
+        eeg_data = []
+        emg_data = []
+        power_data = []
+        delta_power = []
+        theta_power = []
+
+        for epoch in range(n_epochs):
+            start_idx = epoch * samples_per_epoch
+            end_idx = start_idx + samples_per_epoch
+
+            # Downsample EEG and EMG signals
+            eeg_epoch = df["eeg"].iloc[start_idx:end_idx].values
+            emg_epoch = df["emg"].iloc[start_idx:end_idx].values
+
+            eeg_data.append(self._downsample_signal(eeg_epoch, self.DISPLAY_SAMPLES_PER_EPOCH))
+            emg_data.append(self._downsample_signal(emg_epoch, self.DISPLAY_SAMPLES_PER_EPOCH))
+
+            # Power spectrum (already has reasonable resolution)
+            if epoch in smoothed_eeg:
+                power_data.append(smoothed_eeg[epoch].tolist())
+            else:
+                power_data.append([])
+
+            # Relative power values
+            if epoch in rel_power.index:
+                delta_power.append(float(rel_power.loc[epoch, "delta_rel"]))
+                theta_power.append(float(rel_power.loc[epoch, "theta_rel"]))
+            else:
+                delta_power.append(0.0)
+                theta_power.append(0.0)
+
+        # Time axis for display (in seconds within epoch)
+        time_axis = np.linspace(0, epoch_duration, self.DISPLAY_SAMPLES_PER_EPOCH).tolist()
+
+        # Frequency axis for power spectrum (0.1 Hz resolution, 0-50 Hz)
+        freq_axis = np.arange(0, 50, 0.1).tolist()
+
+        return SignalData(
+            eeg=eeg_data,
+            emg=emg_data,
+            power_spectrum=power_data,
+            time_axis=time_axis,
+            freq_axis=freq_axis,
+            delta_power=delta_power,
+            theta_power=theta_power,
+        )
 
     def load_wav_file(self, file_bytes: bytes) -> Tuple[pd.DataFrame, int]:
         """
@@ -70,6 +156,7 @@ class ScoringService:
         self,
         file_bytes: bytes,
         start_epoch: int = 2,
+        include_signals: bool = True,
     ) -> ScoringResult:
         """
         Score a WAV file.
@@ -77,6 +164,7 @@ class ScoringService:
         Args:
             file_bytes: Raw bytes of the WAV file
             start_epoch: Baseline epoch for normalization (should be Wake state)
+            include_signals: Whether to include signal data for visualization
 
         Returns:
             ScoringResult with epochs, summary stats, and metadata
@@ -131,11 +219,18 @@ class ScoringService:
 
         logger.info(f"Scoring complete: {summary}")
 
+        # Step 8: Extract signal data if requested
+        signal_data = None
+        if include_signals:
+            logger.info("Extracting signal data for visualization")
+            signal_data = self.extract_signal_data(df, samplerate, start_epoch)
+
         return ScoringResult(
             epochs=epochs,
             summary=summary,
             samplerate=samplerate,
             baseline_epoch=start_epoch,
+            signal_data=signal_data,
         )
 
     def extract_features(
