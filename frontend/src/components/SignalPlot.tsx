@@ -2,7 +2,6 @@
  * SignalPlot - Reusable time series plot for EEG/EMG signals.
  *
  * Displays signal data with epoch shading based on sleep state.
- * Includes light/dark phase background shading when configured.
  */
 
 import Plot from 'react-plotly.js';
@@ -10,12 +9,6 @@ import { useAppStore } from '../store/useAppStore';
 import { SLEEP_COLORS_LIGHT, SLEEP_COLORS_DARK } from '../types/scoring';
 import type { SleepState } from '../types/scoring';
 import type { Layout } from 'plotly.js';
-
-// Phase background colors (very subtle)
-const PHASE_COLORS = {
-  light: 'rgba(255, 251, 235, 0.6)',  // very light yellow
-  dark: 'rgba(229, 231, 235, 0.6)',   // very light gray
-};
 
 interface SignalPlotProps {
   title: string;
@@ -30,9 +23,7 @@ export function SignalPlot({ title, signalType, height = 200 }: SignalPlotProps)
     currentEpoch,
     windowSize,
     recordingStartTime,
-    lightDarkPhases,
     getTimestampForEpoch,
-    getPhaseForEpoch,
   } = useAppStore();
 
   if (!signalData || epochs.length === 0) {
@@ -52,7 +43,6 @@ export function SignalPlot({ title, signalType, height = 200 }: SignalPlotProps)
   const signal = signalType === 'eeg' ? signalData.eeg : signalData.emg;
   const timeAxis = signalData.time_axis;
   const epochDuration = 10; // seconds
-  const hasPhases = lightDarkPhases.length > 0 && !!recordingStartTime;
 
   // Concatenate signals for visible epochs
   const xData: number[] = [];
@@ -61,29 +51,7 @@ export function SignalPlot({ title, signalType, height = 200 }: SignalPlotProps)
   const tickvals: number[] = [];
   const ticktext: string[] = [];
 
-  // First pass: add phase background shapes (behind everything)
-  if (hasPhases) {
-    for (let i = startEpoch; i <= endEpoch; i++) {
-      const epochOffset = (i - startEpoch) * epochDuration;
-      const phase = getPhaseForEpoch(i);
-      if (phase) {
-        shapes.push({
-          type: 'rect',
-          xref: 'x',
-          yref: 'paper',
-          x0: epochOffset,
-          x1: epochOffset + epochDuration,
-          y0: 0,
-          y1: 1,
-          fillcolor: PHASE_COLORS[phase],
-          line: { width: 0 },
-          layer: 'below',
-        });
-      }
-    }
-  }
-
-  // Second pass: add sleep state shading and signal data
+  // Build sleep state shading and signal data
   for (let i = startEpoch; i <= endEpoch; i++) {
     const epochSignal = signal[i] || [];
     const epochOffset = (i - startEpoch) * epochDuration;
