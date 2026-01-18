@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+/* Custom styles */
+body {
+  @apply bg-gray-50 text-gray-900 min-h-screen;
+}
+
+/* Hypnogram color coding */
+.sleep-wake {
+  @apply bg-amber-400;
+}
+.sleep-nrem {
+  @apply bg-blue-500;
+}
+.sleep-rem {
+  @apply bg-green-500;
+}

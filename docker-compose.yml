@@ -1,0 +1,33 @@
+# Docker Compose for local development/testing
+# Run with: docker compose up
+#
+# This spins up both the backend API and frontend on your local machine.
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount model artifacts from host (so you don't need to copy them into the image)
+      - ./model_artifacts:/app/model_artifacts:ro
+    environment:
+      - MORA_MODEL_PATH=/app/model_artifacts/XGBoost_1.2.4/XGBoost_1.2.4.pkl
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:8000
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
