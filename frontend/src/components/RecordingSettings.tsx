@@ -82,12 +82,12 @@ export function RecordingSettings() {
               <div
                 key={phase.id}
                 className={`flex items-center gap-2 p-2 rounded ${
-                  phase.type === 'light' ? 'bg-yellow-50' : 'bg-gray-800'
+                  phase.type === 'light' ? 'bg-yellow-50' : 'bg-gray-200'
                 }`}
               >
                 <span
                   className={`text-sm font-medium w-12 ${
-                    phase.type === 'light' ? 'text-yellow-800' : 'text-gray-200'
+                    phase.type === 'light' ? 'text-yellow-800' : 'text-gray-700'
                   }`}
                 >
                   {phase.type === 'light' ? 'Light' : 'Dark'}
@@ -100,9 +100,7 @@ export function RecordingSettings() {
                   }
                   className="px-2 py-1 border border-gray-300 rounded text-sm"
                 />
-                <span className={phase.type === 'light' ? 'text-gray-600' : 'text-gray-400'}>
-                  to
-                </span>
+                <span className="text-gray-600">to</span>
                 <input
                   type="time"
                   value={phase.endTime}

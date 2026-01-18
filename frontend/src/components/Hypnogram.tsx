@@ -3,11 +3,13 @@
  *
  * A hypnogram shows sleep stages over time as a step function.
  * Click anywhere on the plot to navigate to that epoch.
+ * Includes light/dark phase background shading when configured.
  */
 
 import Plot from 'react-plotly.js';
 import { useAppStore } from '../store/useAppStore';
 import { SLEEP_COLORS, type SleepState } from '../types/scoring';
+import type { Layout } from 'plotly.js';
 
 // Map sleep states to numeric values for y-axis
 const SLEEP_Y_VALUES: Record<SleepState, number> = {
@@ -17,12 +19,30 @@ const SLEEP_Y_VALUES: Record<SleepState, number> = {
   'Unscored': 3,
 };
 
+// Phase background colors (very subtle)
+const PHASE_COLORS = {
+  light: 'rgba(255, 251, 235, 0.7)',  // very light yellow
+  dark: 'rgba(229, 231, 235, 0.7)',   // very light gray
+};
+
 export function Hypnogram() {
-  const { epochs, summary, currentEpoch, setCurrentEpoch } = useAppStore();
+  const {
+    epochs,
+    summary,
+    currentEpoch,
+    setCurrentEpoch,
+    recordingStartTime,
+    lightDarkPhases,
+    getTimestampForEpoch,
+    getPhaseForEpoch,
+  } = useAppStore();
 
   if (epochs.length === 0) {
     return null;
   }
+
+  const hasTimestamp = !!recordingStartTime;
+  const hasPhases = lightDarkPhases.length > 0 && hasTimestamp;
 
   // Prepare data for Plotly
   // Convert timestamps to hours for readability
@@ -31,6 +51,61 @@ export function Hypnogram() {
 
   // Current epoch position (for vertical line indicator)
   const currentTime = epochs[currentEpoch]?.timestamp_seconds / 3600 || 0;
+
+  // Build phase background shapes
+  const phaseShapes: Partial<Layout['shapes']>[number][] = [];
+  if (hasPhases) {
+    let currentPhase = getPhaseForEpoch(0);
+    let phaseStartHours = 0;
+
+    for (let i = 1; i <= epochs.length; i++) {
+      const phase = i < epochs.length ? getPhaseForEpoch(i) : null;
+      if (phase !== currentPhase || i === epochs.length) {
+        // Phase changed or end of epochs - close the current phase shape
+        if (currentPhase) {
+          const phaseEndHours = epochs[i - 1].timestamp_seconds / 3600 + 10 / 3600; // include last epoch
+          phaseShapes.push({
+            type: 'rect',
+            xref: 'x',
+            yref: 'paper',
+            x0: phaseStartHours,
+            x1: phaseEndHours,
+            y0: 0,
+            y1: 1,
+            fillcolor: PHASE_COLORS[currentPhase],
+            line: { width: 0 },
+            layer: 'below',
+          });
+        }
+        currentPhase = phase;
+        phaseStartHours = i < epochs.length ? epochs[i].timestamp_seconds / 3600 : 0;
+      }
+    }
+  }
+
+  // Build custom tick labels with actual times if available
+  const tickCount = Math.min(10, Math.ceil(epochs.length / 360)); // ~1 tick per hour, max 10
+  const tickInterval = Math.floor(epochs.length / tickCount);
+  const tickvals: number[] = [];
+  const ticktext: string[] = [];
+
+  for (let i = 0; i < epochs.length; i += tickInterval) {
+    const hours = epochs[i].timestamp_seconds / 3600;
+    tickvals.push(hours);
+
+    if (hasTimestamp) {
+      const timestamp = getTimestampForEpoch(i);
+      if (timestamp) {
+        const h = timestamp.getHours().toString().padStart(2, '0');
+        const m = timestamp.getMinutes().toString().padStart(2, '0');
+        ticktext.push(`${h}:${m}`);
+      } else {
+        ticktext.push(`${hours.toFixed(1)}h`);
+      }
+    } else {
+      ticktext.push(`${hours.toFixed(1)}h`);
+    }
+  }
 
   // Handle click on plot to navigate to epoch
   const handlePlotClick = (event: Plotly.PlotMouseEvent) => {
@@ -72,13 +147,16 @@ export function Hypnogram() {
           height: 200,
           margin: { l: 80, r: 20, t: 20, b: 50 },
           xaxis: {
-            title: { text: 'Time (hours)' },
+            title: { text: hasTimestamp ? 'Time' : 'Time (hours)' },
             showgrid: true,
             gridcolor: '#e5e7eb',
+            tickmode: 'array' as const,
+            tickvals,
+            ticktext,
           },
           yaxis: {
             title: { text: 'Sleep State' },
-            tickmode: 'array',
+            tickmode: 'array' as const,
             tickvals: [0, 1, 2, 3],
             ticktext: ['NREM', 'REM', 'Wake', '?'],
             range: [-0.5, 3.5],
@@ -88,8 +166,9 @@ export function Hypnogram() {
           plot_bgcolor: 'white',
           paper_bgcolor: 'white',
           hovermode: 'closest',
-          // Vertical line showing current epoch
+          // Phase background shapes + vertical line showing current epoch
           shapes: [
+            ...phaseShapes,
             {
               type: 'line',
               xref: 'x',
@@ -104,7 +183,7 @@ export function Hypnogram() {
                 dash: 'solid',
               },
             },
-          ],
+          ] as Layout['shapes'],
           annotations: [
             {
               x: currentTime,

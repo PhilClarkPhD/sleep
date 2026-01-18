@@ -2,6 +2,7 @@
  * SignalPlot - Reusable time series plot for EEG/EMG signals.
  *
  * Displays signal data with epoch shading based on sleep state.
+ * Includes light/dark phase background shading when configured.
  */
 
 import Plot from 'react-plotly.js';
@@ -9,6 +10,12 @@ import { useAppStore } from '../store/useAppStore';
 import { SLEEP_COLORS_LIGHT, SLEEP_COLORS_DARK } from '../types/scoring';
 import type { SleepState } from '../types/scoring';
 import type { Layout } from 'plotly.js';
+
+// Phase background colors (very subtle)
+const PHASE_COLORS = {
+  light: 'rgba(255, 251, 235, 0.6)',  // very light yellow
+  dark: 'rgba(229, 231, 235, 0.6)',   // very light gray
+};
 
 interface SignalPlotProps {
   title: string;
@@ -22,6 +29,10 @@ export function SignalPlot({ title, signalType, height = 200 }: SignalPlotProps)
     epochs,
     currentEpoch,
     windowSize,
+    recordingStartTime,
+    lightDarkPhases,
+    getTimestampForEpoch,
+    getPhaseForEpoch,
   } = useAppStore();
 
   if (!signalData || epochs.length === 0) {
@@ -41,12 +52,38 @@ export function SignalPlot({ title, signalType, height = 200 }: SignalPlotProps)
   const signal = signalType === 'eeg' ? signalData.eeg : signalData.emg;
   const timeAxis = signalData.time_axis;
   const epochDuration = 10; // seconds
+  const hasPhases = lightDarkPhases.length > 0 && !!recordingStartTime;
 
   // Concatenate signals for visible epochs
   const xData: number[] = [];
   const yData: number[] = [];
   const shapes: Partial<Layout['shapes']>[number][] = [];
+  const tickvals: number[] = [];
+  const ticktext: string[] = [];
 
+  // First pass: add phase background shapes (behind everything)
+  if (hasPhases) {
+    for (let i = startEpoch; i <= endEpoch; i++) {
+      const epochOffset = (i - startEpoch) * epochDuration;
+      const phase = getPhaseForEpoch(i);
+      if (phase) {
+        shapes.push({
+          type: 'rect',
+          xref: 'x',
+          yref: 'paper',
+          x0: epochOffset,
+          x1: epochOffset + epochDuration,
+          y0: 0,
+          y1: 1,
+          fillcolor: PHASE_COLORS[phase],
+          line: { width: 0 },
+          layer: 'below',
+        });
+      }
+    }
+  }
+
+  // Second pass: add sleep state shading and signal data
   for (let i = startEpoch; i <= endEpoch; i++) {
     const epochSignal = signal[i] || [];
     const epochOffset = (i - startEpoch) * epochDuration;
@@ -58,7 +95,7 @@ export function SignalPlot({ title, signalType, height = 200 }: SignalPlotProps)
       yData.push(epochSignal[j]);
     }
 
-    // Add shading for this epoch
+    // Add shading for this epoch (sleep state)
     const isCurrentEpoch = i === currentEpoch;
     const score = epochs[i]?.score as SleepState || 'Unscored';
     const color = isCurrentEpoch ? SLEEP_COLORS_DARK[score] : SLEEP_COLORS_LIGHT[score];
@@ -75,6 +112,18 @@ export function SignalPlot({ title, signalType, height = 200 }: SignalPlotProps)
       line: { width: 0 },
       layer: 'below',
     });
+
+    // Build tick labels with actual time if available
+    const timestamp = getTimestampForEpoch(i);
+    tickvals.push(epochOffset + epochDuration / 2); // center of epoch
+    if (timestamp) {
+      const hours = timestamp.getHours().toString().padStart(2, '0');
+      const minutes = timestamp.getMinutes().toString().padStart(2, '0');
+      const seconds = timestamp.getSeconds().toString().padStart(2, '0');
+      ticktext.push(`${hours}:${minutes}:${seconds}`);
+    } else {
+      ticktext.push(`${epochs[i].timestamp_seconds}s`);
+    }
   }
 
   // Calculate y-axis range
@@ -100,10 +149,13 @@ export function SignalPlot({ title, signalType, height = 200 }: SignalPlotProps)
           font: { size: 14 },
         },
         xaxis: {
-          title: { text: 'Time (s)' },
+          title: { text: recordingStartTime ? 'Time' : 'Time (s)' },
           showgrid: true,
           gridcolor: '#e5e7eb',
           range: [0, (endEpoch - startEpoch + 1) * epochDuration],
+          tickmode: 'array' as const,
+          tickvals,
+          ticktext,
         },
         yaxis: {
           title: { text: signalType === 'eeg' ? 'EEG (μV)' : 'EMG (μV)' },
