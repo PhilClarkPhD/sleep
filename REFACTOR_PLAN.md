@@ -11,7 +11,7 @@
 | Phase 5: CLI Tool | ✅ **COMPLETED** | `mora score` command |
 | Phase 6: Deployment | ✅ **COMPLETED** | Railway + Cloudflare Pages live |
 | Phase 7: Security | ✅ **COMPLETED** | API keys, rate limiting, logging |
-| Phase 8: PyQt5 Deprecation | ⏸️ Pending | Not started |
+| Phase 8: PyQt5 Deprecation | 🔄 **IN PROGRESS** | Frontend feature parity achieved |
 
 **Branch:** `claude/refactor`
 
@@ -20,7 +20,7 @@
 - Backend: https://sleep-production.up.railway.app
 - API Docs: https://sleep-production.up.railway.app/docs
 
-**Next step:** Phase 8 (PyQt5 Deprecation) or deploy security changes
+**Next step:** Deploy latest changes, then finalize PyQt5 deprecation
 
 ---
 
@@ -367,11 +367,16 @@ docker compose -f docker-compose.local.yml up
 ### Migration Guide for Existing Users:
 1. **Data compatibility:** Ensure CSV export format matches between PyQt5 and web app
 2. **Feature parity checklist:**
-   - [ ] WAV file loading
-   - [ ] Manual epoch editing
-   - [ ] Hypnogram visualization
-   - [ ] CSV export
-   - [ ] Batch processing (new in web app)
+   - [x] WAV file loading
+   - [x] Manual epoch editing (keyboard shortcuts: W/E/R/T)
+   - [x] Hypnogram visualization (clickable navigation)
+   - [x] CSV export (scores + breakdown)
+   - [x] CSV import (restore previous work)
+   - [x] EEG/EMG time series plots
+   - [x] Power spectrum with delta/theta bands
+   - [x] Relative power bar chart
+   - [x] Epoch navigation (arrow keys + window size)
+   - [ ] Batch processing (CLI supports via `mora batch`)
 3. **Documentation:** Create "Migrating from Desktop to Web App" guide
 
 ### Archive Strategy:
@@ -510,6 +515,6 @@ curl -X POST http://localhost:8000/api/v1/score \
 ### Known Limitations (Current Implementation)
 1. ~~No authentication/rate limiting~~ ✅ Implemented in Phase 7 (optional, disabled by default)
 2. No async job queue for large files (files process synchronously)
-3. No EEG/EMG signal plots in frontend (only hypnogram)
-4. No manual epoch editing in frontend
+3. ~~No EEG/EMG signal plots in frontend~~ ✅ Added in Phase 8 (SignalPlot, PowerSpectrum, RelativePower)
+4. ~~No manual epoch editing in frontend~~ ✅ Added in Phase 8 (keyboard shortcuts W/E/R/T)
 5. No batch processing in web UI (CLI supports batch via `mora batch`)
