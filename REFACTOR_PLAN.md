@@ -6,7 +6,7 @@
 |-------|--------|-------|
 | Phase 1: Backend API | ✅ **COMPLETED** | FastAPI backend fully functional |
 | Phase 2: Web Frontend | ✅ **COMPLETED** | React app with Plotly hypnogram |
-| Phase 3: Model Validation | ⏸️ Pending | Not started |
+| Phase 3: Model Validation | ✅ **COMPLETED** | Time-series CV, diagnostics module |
 | Phase 4: Testing | ⏸️ Pending | Not started |
 | Phase 5: CLI Tool | ⏸️ Pending | Not started |
 | Phase 6: Deployment | ✅ **COMPLETED** | Railway + Cloudflare Pages live |
