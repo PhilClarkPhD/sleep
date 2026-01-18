@@ -13,11 +13,53 @@ import type { ScoringResponse, ModelInfo, HealthResponse } from '../types/scorin
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 const API_BASE = `${API_BASE_URL}/api/v1`;
 
+// API Key storage key
+const API_KEY_STORAGE_KEY = 'mora_api_key';
+
+/**
+ * Get the stored API key from localStorage.
+ */
+export function getApiKey(): string | null {
+  return localStorage.getItem(API_KEY_STORAGE_KEY);
+}
+
+/**
+ * Save an API key to localStorage.
+ */
+export function setApiKey(key: string | null): void {
+  if (key) {
+    localStorage.setItem(API_KEY_STORAGE_KEY, key);
+  } else {
+    localStorage.removeItem(API_KEY_STORAGE_KEY);
+  }
+}
+
+/**
+ * Check if an API key is stored.
+ */
+export function hasApiKey(): boolean {
+  return !!getApiKey();
+}
+
+/**
+ * Get headers including API key if set.
+ */
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const apiKey = getApiKey();
+  if (apiKey) {
+    headers['X-API-Key'] = apiKey;
+  }
+  return headers;
+}
+
 /**
  * Check if the API is healthy and the model is loaded.
  */
 export async function checkHealth(): Promise<HealthResponse> {
-  const response = await fetch(`${API_BASE}/health`);
+  const response = await fetch(`${API_BASE}/health`, {
+    headers: getAuthHeaders(),
+  });
   if (!response.ok) {
     throw new Error(`Health check failed: ${response.statusText}`);
   }
@@ -28,7 +70,9 @@ export async function checkHealth(): Promise<HealthResponse> {
  * Get model information.
  */
 export async function getModelInfo(): Promise<ModelInfo> {
-  const response = await fetch(`${API_BASE}/model/info`);
+  const response = await fetch(`${API_BASE}/model/info`, {
+    headers: getAuthHeaders(),
+  });
   if (!response.ok) {
     throw new Error(`Failed to get model info: ${response.statusText}`);
   }
@@ -88,6 +132,13 @@ export async function scoreFile(
     });
 
     xhr.open('POST', `${API_BASE}/score`);
+
+    // Add API key header if set
+    const apiKey = getApiKey();
+    if (apiKey) {
+      xhr.setRequestHeader('X-API-Key', apiKey);
+    }
+
     xhr.send(formData);
   });
 }
