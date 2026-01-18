@@ -73,9 +73,11 @@ interface AppState {
 
   // Recording metadata actions
   setRecordingStartTime: (time: string | null) => void;
-  addLightDarkPhase: (type: PhaseType, startTime: string, endTime: string) => void;
-  updateLightDarkPhase: (id: string, updates: Partial<Omit<LightDarkPhase, 'id'>>) => void;
+  addLightDarkPhase: (type: PhaseType, startTime: string, endTime: string) => string | null; // returns error message or null
+  updateLightDarkPhase: (id: string, updates: Partial<Omit<LightDarkPhase, 'id'>>) => string | null; // returns error message or null
   removeLightDarkPhase: (id: string) => void;
+  clearAllPhases: () => void;
+  checkPhaseOverlap: (startTime: string, endTime: string, excludeId?: string) => boolean;
   getPhaseForEpoch: (epochIndex: number) => PhaseType | null;
   getTimestampForEpoch: (epochIndex: number) => Date | null;
 
@@ -275,7 +277,57 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Recording metadata actions
   setRecordingStartTime: (recordingStartTime) => set({ recordingStartTime }),
 
+  // Helper to convert time string to minutes since midnight
+  checkPhaseOverlap: (startTime, endTime, excludeId) => {
+    const { lightDarkPhases } = get();
+
+    const timeToMinutes = (time: string) => {
+      const [h, m] = time.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    const newStart = timeToMinutes(startTime);
+    const newEnd = timeToMinutes(endTime);
+
+    // Check overlap with each existing phase
+    for (const phase of lightDarkPhases) {
+      if (excludeId && phase.id === excludeId) continue;
+
+      const existingStart = timeToMinutes(phase.startTime);
+      const existingEnd = timeToMinutes(phase.endTime);
+
+      // Handle phases that span midnight
+      const newSpansMidnight = newStart > newEnd;
+      const existingSpansMidnight = existingStart > existingEnd;
+
+      // Convert to ranges for easier comparison
+      // For midnight-spanning phases, we check two separate ranges
+      const newRanges: [number, number][] = newSpansMidnight
+        ? [[newStart, 1440], [0, newEnd]]
+        : [[newStart, newEnd]];
+      const existingRanges: [number, number][] = existingSpansMidnight
+        ? [[existingStart, 1440], [0, existingEnd]]
+        : [[existingStart, existingEnd]];
+
+      // Check if any ranges overlap
+      for (const [ns, ne] of newRanges) {
+        for (const [es, ee] of existingRanges) {
+          // Two ranges overlap if start1 < end2 AND start2 < end1
+          if (ns < ee && es < ne) {
+            return true; // Overlap detected
+          }
+        }
+      }
+    }
+    return false;
+  },
+
   addLightDarkPhase: (type, startTime, endTime) => {
+    // Check for overlap
+    if (get().checkPhaseOverlap(startTime, endTime)) {
+      return 'This phase overlaps with an existing phase';
+    }
+
     const { lightDarkPhases } = get();
     const newPhase: LightDarkPhase = {
       id: `phase-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -284,20 +336,38 @@ export const useAppStore = create<AppState>((set, get) => ({
       endTime,
     };
     set({ lightDarkPhases: [...lightDarkPhases, newPhase] });
+    return null;
   },
 
   updateLightDarkPhase: (id, updates) => {
     const { lightDarkPhases } = get();
+    const existingPhase = lightDarkPhases.find(p => p.id === id);
+    if (!existingPhase) return 'Phase not found';
+
+    // Build the updated phase to check for overlaps
+    const updatedStartTime = updates.startTime ?? existingPhase.startTime;
+    const updatedEndTime = updates.endTime ?? existingPhase.endTime;
+
+    // Check for overlap (excluding this phase)
+    if (get().checkPhaseOverlap(updatedStartTime, updatedEndTime, id)) {
+      return 'This change would create an overlap with another phase';
+    }
+
     set({
       lightDarkPhases: lightDarkPhases.map(phase =>
         phase.id === id ? { ...phase, ...updates } : phase
       ),
     });
+    return null;
   },
 
   removeLightDarkPhase: (id) => {
     const { lightDarkPhases } = get();
     set({ lightDarkPhases: lightDarkPhases.filter(phase => phase.id !== id) });
+  },
+
+  clearAllPhases: () => {
+    set({ lightDarkPhases: [] });
   },
 
   getTimestampForEpoch: (epochIndex) => {

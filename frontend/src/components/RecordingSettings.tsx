@@ -4,6 +4,7 @@
  * Allows users to:
  * - Set the recording start date/time
  * - Define light and dark phases with start/end times
+ * - Validates phases don't overlap
  */
 
 import { useState } from 'react';
@@ -18,11 +19,13 @@ export function RecordingSettings() {
     addLightDarkPhase,
     updateLightDarkPhase,
     removeLightDarkPhase,
+    clearAllPhases,
   } = useAppStore();
 
   const [newPhaseType, setNewPhaseType] = useState<PhaseType>('light');
   const [newPhaseStart, setNewPhaseStart] = useState('07:00');
   const [newPhaseEnd, setNewPhaseEnd] = useState('19:00');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Convert ISO string to datetime-local format for input
   const formatForInput = (isoString: string | null): string => {
@@ -42,11 +45,43 @@ export function RecordingSettings() {
   };
 
   const handleAddPhase = () => {
-    addLightDarkPhase(newPhaseType, newPhaseStart, newPhaseEnd);
+    setErrorMessage(null);
+    const error = addLightDarkPhase(newPhaseType, newPhaseStart, newPhaseEnd);
+    if (error) {
+      setErrorMessage(error);
+      return;
+    }
     // Toggle to the other type for convenience
     setNewPhaseType(newPhaseType === 'light' ? 'dark' : 'light');
     setNewPhaseStart(newPhaseType === 'light' ? '19:00' : '07:00');
     setNewPhaseEnd(newPhaseType === 'light' ? '07:00' : '19:00');
+  };
+
+  const handleUpdatePhase = (id: string, updates: { startTime?: string; endTime?: string }) => {
+    setErrorMessage(null);
+    const error = updateLightDarkPhase(id, updates);
+    if (error) {
+      setErrorMessage(error);
+    }
+  };
+
+  const handleRemovePhase = (id: string) => {
+    setErrorMessage(null);
+    removeLightDarkPhase(id);
+  };
+
+  const handleClearAll = () => {
+    setErrorMessage(null);
+    clearAllPhases();
+  };
+
+  const handlePreset = (lightStart: string, lightEnd: string, darkStart: string, darkEnd: string) => {
+    setErrorMessage(null);
+    // Clear existing phases first
+    clearAllPhases();
+    // Add the preset phases
+    addLightDarkPhase('light', lightStart, lightEnd);
+    addLightDarkPhase('dark', darkStart, darkEnd);
   };
 
   return (
@@ -71,9 +106,26 @@ export function RecordingSettings() {
 
       {/* Light/Dark Phases */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Light/Dark Phases
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Light/Dark Phases
+          </label>
+          {lightDarkPhases.length > 0 && (
+            <button
+              onClick={handleClearAll}
+              className="text-xs text-red-500 hover:text-red-700"
+            >
+              Clear All
+            </button>
+          )}
+        </div>
+
+        {/* Error message */}
+        {errorMessage && (
+          <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+            {errorMessage}
+          </div>
+        )}
 
         {/* Existing phases */}
         {lightDarkPhases.length > 0 && (
@@ -96,7 +148,7 @@ export function RecordingSettings() {
                   type="time"
                   value={phase.startTime}
                   onChange={(e) =>
-                    updateLightDarkPhase(phase.id, { startTime: e.target.value })
+                    handleUpdatePhase(phase.id, { startTime: e.target.value })
                   }
                   className="px-2 py-1 border border-gray-300 rounded text-sm"
                 />
@@ -105,12 +157,12 @@ export function RecordingSettings() {
                   type="time"
                   value={phase.endTime}
                   onChange={(e) =>
-                    updateLightDarkPhase(phase.id, { endTime: e.target.value })
+                    handleUpdatePhase(phase.id, { endTime: e.target.value })
                   }
                   className="px-2 py-1 border border-gray-300 rounded text-sm"
                 />
                 <button
-                  onClick={() => removeLightDarkPhase(phase.id)}
+                  onClick={() => handleRemovePhase(phase.id)}
                   className="ml-auto text-red-500 hover:text-red-700 text-sm"
                   title="Remove phase"
                 >
@@ -152,28 +204,22 @@ export function RecordingSettings() {
           </button>
         </div>
         <p className="text-xs text-gray-500 mt-1">
-          Phases can span midnight (e.g., Dark: 19:00 to 07:00)
+          Phases can span midnight (e.g., Dark: 19:00 to 07:00). Phases cannot overlap.
         </p>
       </div>
 
       {/* Quick presets */}
       <div className="border-t pt-3">
-        <p className="text-sm text-gray-600 mb-2">Quick presets:</p>
+        <p className="text-sm text-gray-600 mb-2">Quick presets (replaces existing):</p>
         <div className="flex gap-2">
           <button
-            onClick={() => {
-              addLightDarkPhase('light', '07:00', '19:00');
-              addLightDarkPhase('dark', '19:00', '07:00');
-            }}
+            onClick={() => handlePreset('07:00', '19:00', '19:00', '07:00')}
             className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
           >
             12h/12h (7am-7pm)
           </button>
           <button
-            onClick={() => {
-              addLightDarkPhase('light', '06:00', '18:00');
-              addLightDarkPhase('dark', '18:00', '06:00');
-            }}
+            onClick={() => handlePreset('06:00', '18:00', '18:00', '06:00')}
             className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
           >
             12h/12h (6am-6pm)
