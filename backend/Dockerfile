@@ -14,8 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ ./app/
 
-# Create directory for model artifacts (will be mounted or copied)
-RUN mkdir -p /app/model_artifacts
+# Copy model artifacts
+COPY models/ ./models/
 
 # Expose port
 EXPOSE 8000

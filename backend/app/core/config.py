@@ -18,7 +18,12 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     # Model settings
-    MODEL_PATH: Path = Path(__file__).parent.parent.parent.parent / "model_artifacts" / "XGBoost_1.2.4" / "XGBoost_1.2.4.pkl"
+    # Default: look in backend/models/ (for Docker), fallback to model_artifacts/ (for local dev)
+    MODEL_PATH: Path = (
+        Path(__file__).parent.parent.parent / "models" / "XGBoost_1.2.4.pkl"
+        if (Path(__file__).parent.parent.parent / "models" / "XGBoost_1.2.4.pkl").exists()
+        else Path(__file__).parent.parent.parent.parent / "model_artifacts" / "XGBoost_1.2.4" / "XGBoost_1.2.4.pkl"
+    )
 
     # Feature columns expected by the model (in order)
     FEATURE_COLS: List[str] = [
