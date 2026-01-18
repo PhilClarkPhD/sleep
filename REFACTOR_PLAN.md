@@ -8,7 +8,7 @@
 | Phase 2: Web Frontend | ✅ **COMPLETED** | React app with Plotly hypnogram |
 | Phase 3: Model Validation | ✅ **COMPLETED** | Time-series CV, diagnostics module |
 | Phase 4: Testing | ✅ **COMPLETED** | Unit + integration tests |
-| Phase 5: CLI Tool | ⏸️ Pending | Not started |
+| Phase 5: CLI Tool | ✅ **COMPLETED** | `mora score` command |
 | Phase 6: Deployment | ✅ **COMPLETED** | Railway + Cloudflare Pages live |
 | Phase 7: Security | ⏸️ Pending | Not started |
 | Phase 8: PyQt5 Deprecation | ⏸️ Pending | Not started |
