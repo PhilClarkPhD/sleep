@@ -9,12 +9,18 @@
 | Phase 3: Model Validation | ⏸️ Pending | Not started |
 | Phase 4: Testing | ⏸️ Pending | Not started |
 | Phase 5: CLI Tool | ⏸️ Pending | Not started |
-| Phase 6: Deployment | 🔄 **IN PROGRESS** | See DEPLOYMENT.md |
+| Phase 6: Deployment | ✅ **COMPLETED** | Railway + Cloudflare Pages live |
 | Phase 7: Security | ⏸️ Pending | Not started |
 | Phase 8: PyQt5 Deprecation | ⏸️ Pending | Not started |
 
 **Branch:** `claude/refactor`
-**Next step:** Deploy to Railway and Cloudflare Pages (see DEPLOYMENT.md)
+
+**Live URLs:**
+- Frontend: https://sleep-cz3.pages.dev
+- Backend: https://sleep-production.up.railway.app
+- API Docs: https://sleep-production.up.railway.app/docs
+
+**Next step:** Choose next phase (Model Validation, Testing, or Security)
 
 ---
 
