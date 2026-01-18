@@ -8,7 +8,7 @@ from typing import Dict, List, Tuple, Union
 import numpy as np
 import pandas as pd
 from scipy.fft import rfft
-from scipy.integrate import simps
+from scipy.integrate import simpson
 
 
 def compute_power(
@@ -159,14 +159,14 @@ def compute_relative_power(
             len((np.where(idx_delta))[0])
         ) >= delta_length:
             # Compute total power
-            total_power = simps(x, dx=freq_res)
+            total_power = simpson(x, dx=freq_res)
 
             # Compute delta power
-            delta_power = (simps(x[idx_delta], dx=freq_res)) / total_power
+            delta_power = (simpson(x[idx_delta], dx=freq_res)) / total_power
             rel_power_list.append(delta_power)
 
             # Compute theta power
-            theta_power = (simps(x[idx_theta], dx=freq_res)) / total_power
+            theta_power = (simpson(x[idx_theta], dx=freq_res)) / total_power
             rel_power_list.append(theta_power)
 
             # Compute proportion of theta to delta
