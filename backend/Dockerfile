@@ -20,6 +20,5 @@ COPY models/ ./models/
 # Expose port
 EXPOSE 8000
 
-# Run the application
-# Use shell form for proper variable expansion
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Run the application on port 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
