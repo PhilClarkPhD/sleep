@@ -216,6 +216,38 @@ npm run build
 
 ---
 
+## Phase 6: Deployment - IN PROGRESS
+
+### Summary
+Created deployment configuration files for Railway (backend) and Cloudflare Pages (frontend). Detailed step-by-step instructions are in `DEPLOYMENT.md`.
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `backend/Dockerfile` | Python 3.11-slim image with FastAPI |
+| `backend/railway.json` | Railway deployment configuration |
+| `backend/models/XGBoost_1.2.4.pkl` | Model file for deployment (~7MB) |
+| `frontend/Dockerfile` | Multi-stage build with nginx |
+| `frontend/nginx.conf` | SPA routing configuration |
+| `docker-compose.yml` | Local Docker development setup |
+| `DEPLOYMENT.md` | Step-by-step deployment instructions |
+
+### Deployment Architecture
+
+- **Backend**: Railway (~$5-15/month)
+- **Frontend**: Cloudflare Pages (free)
+- **Local option**: Docker Compose for air-gapped environments
+
+### Next Actions
+
+1. Create Railway account and deploy backend
+2. Create Cloudflare account and deploy frontend
+3. Set `VITE_API_URL` environment variable in Cloudflare to Railway URL
+4. Test end-to-end functionality
+
+---
+
 ## Next Steps
 
 | Phase | Status | Priority |
@@ -225,12 +257,12 @@ npm run build
 | Phase 3: Model Diagnostics | Not started | Medium |
 | Phase 4: Testing | Not started | Medium |
 | Phase 5: CLI Tool | Not started | Low |
-| Phase 6: Deployment | Not started | Medium |
+| Phase 6: Deployment | **IN PROGRESS** | Medium |
 | Phase 7: Security | Not started | Medium |
 | Phase 8: PyQt5 Deprecation | Not started | Low |
 
 ### Recommended Next Actions
 
-1. **Phase 6: Deployment** - Deploy to Railway (backend) and Cloudflare Pages (frontend)
+1. **Phase 6: Deployment** - Follow DEPLOYMENT.md to deploy to Railway and Cloudflare
 2. **Phase 3: Model Diagnostics** - Add cross-validation, Cohen's Kappa, transition analysis
 3. **Fix model serialization** - Re-save XGBoost model to eliminate version warnings

@@ -1,5 +1,23 @@
 # Mora Sleep Scoring Project Improvement Plan
 
+## Current Status (Updated: January 2025)
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Phase 1: Backend API | ✅ **COMPLETED** | FastAPI backend fully functional |
+| Phase 2: Web Frontend | ✅ **COMPLETED** | React app with Plotly hypnogram |
+| Phase 3: Model Validation | ⏸️ Pending | Not started |
+| Phase 4: Testing | ⏸️ Pending | Not started |
+| Phase 5: CLI Tool | ⏸️ Pending | Not started |
+| Phase 6: Deployment | 🔄 **IN PROGRESS** | See DEPLOYMENT.md |
+| Phase 7: Security | ⏸️ Pending | Not started |
+| Phase 8: PyQt5 Deprecation | ⏸️ Pending | Not started |
+
+**Branch:** `claude/refactor`
+**Next step:** Deploy to Railway and Cloudflare Pages (see DEPLOYMENT.md)
+
+---
+
 ## Executive Summary
 
 Transform the Mora sleep scoring application from a Python-dependent PyQt5 desktop app to a modern, accessible web-based system with REST API, while improving model validation and diagnostics.
@@ -39,10 +57,11 @@ Transform the Mora sleep scoring application from a Python-dependent PyQt5 deskt
 
 ---
 
-## Phase 1: Backend API (Priority: High)
+## Phase 1: Backend API ✅ COMPLETED
 
 ### Create FastAPI backend
 **Location:** `/Users/phil/philclarkphd/sleep/backend/`
+**Status:** Fully implemented and tested
 
 ```
 backend/
@@ -96,10 +115,11 @@ GET /api/v1/jobs/{job_id}
 
 ---
 
-## Phase 2: Web Frontend (Priority: High)
+## Phase 2: Web Frontend ✅ COMPLETED
 
 ### Create React frontend
 **Location:** `/Users/phil/philclarkphd/sleep/frontend/`
+**Status:** Fully implemented and tested locally
 
 ```
 frontend/
@@ -228,7 +248,16 @@ mora-cli score recording.wav --api-url https://mora.example.com
 
 ---
 
-## Phase 6: Deployment (Priority: Medium)
+## Phase 6: Deployment 🔄 IN PROGRESS
+
+**See [DEPLOYMENT.md](./DEPLOYMENT.md) for step-by-step deployment instructions.**
+
+### Files Created for Deployment:
+- `backend/Dockerfile` - Python 3.11-slim image with FastAPI
+- `backend/railway.json` - Railway deployment configuration
+- `docker-compose.yml` - Local Docker development setup
+- `frontend/Dockerfile` - Multi-stage build with nginx
+- `frontend/nginx.conf` - Nginx configuration for SPA routing
 
 ### Recommended: Railway
 - **Cost:** ~$7-15/month
@@ -405,11 +434,76 @@ docker compose -f docker-compose.local.yml up
 
 ## Documentation Requirements
 
-### REFACTOR_REVIEW.md
-After implementation, create `/Users/phil/philclarkphd/sleep/REFACTOR_REVIEW.md` containing:
+### REFACTOR_REVIEW.md ✅ Created
+See `/Users/phil/philclarkphd/sleep/REFACTOR_REVIEW.md` for:
 - Summary of changes made per phase
 - Files created/modified/deleted
 - Validation results (tests passed, manual verification)
 - Known issues or limitations
 - Next steps or follow-up items
 - Instructions for running the new system
+
+---
+
+## Implementation Insights & Lessons Learned
+
+These notes capture lessons learned during Phase 1 & 2 implementation to help future development.
+
+### Python Version Compatibility
+- **Issue:** Python 3.9 doesn't support `X | Y` union syntax (PEP 604)
+- **Solution:** Use `from typing import Optional, List, Dict, Tuple` and `Optional[X]` syntax
+- **Affected files:** All backend Python files use typing module for compatibility
+
+### Environment Setup
+- **Node.js required:** Install with `brew install node` on macOS
+- **Python deps:** `pip install -r backend/requirements.txt`
+- **Frontend deps:** `cd frontend && npm install`
+
+### Running Locally (Quick Start)
+```bash
+# Terminal 1 - Backend
+cd backend
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --port 8000
+
+# Terminal 2 - Frontend
+cd frontend
+npm install
+npm run dev
+# Opens at http://localhost:3000
+```
+
+### Model Path Configuration
+The backend looks for the model in two locations:
+1. `backend/models/XGBoost_1.2.4.pkl` (Docker/production)
+2. `model_artifacts/XGBoost_1.2.4/XGBoost_1.2.4.pkl` (local development)
+
+The model file is ~7MB and committed to the repo for deployment.
+
+### Frontend API Configuration
+The frontend uses `VITE_API_URL` environment variable:
+- Local dev with Vite proxy: leave unset (Vite handles `/api/` routing)
+- Local dev direct: `VITE_API_URL=http://localhost:8000`
+- Production: `VITE_API_URL=https://your-railway-url.up.railway.app`
+
+### TypeScript Notes
+- Plotly.js title must be `{ text: 'string' }` not just `'string'`
+- Unused variables cause build errors (remove or prefix with `_`)
+
+### Verification Test
+```bash
+# Test backend health
+curl http://localhost:8000/api/v1/health
+# Expected: {"status":"healthy","model_loaded":true,"version":"1.0.0"}
+
+# Test scoring with sample file
+curl -X POST http://localhost:8000/api/v1/score \
+  -F "file=@sample_data/sample_signal.wav"
+```
+
+### Known Limitations (Current Implementation)
+1. No authentication/rate limiting (Phase 7)
+2. No async job queue for large files (files process synchronously)
+3. No EEG/EMG signal plots in frontend (only hypnogram)
+4. No manual epoch editing in frontend
+5. No batch processing yet
