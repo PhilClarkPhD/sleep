@@ -46,15 +46,16 @@ async def get_model_info(
 )
 async def health_check(
     model_manager: ModelManager = Depends(get_model_manager),
-    client_id: Optional[str] = Depends(verify_api_key),
 ):
     """
     Health check endpoint.
 
-    Returns the API status and whether the model is loaded.
+    Returns the API status, whether the model is loaded, and whether auth is required.
+    This endpoint is always public (no auth) for infrastructure health checks.
     """
     return HealthResponse(
         status="healthy" if model_manager.is_loaded else "degraded",
         model_loaded=model_manager.is_loaded,
         version=settings.VERSION,
+        auth_required=bool(settings.API_KEYS),
     )

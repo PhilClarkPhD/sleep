@@ -27,26 +27,42 @@ function App() {
     setApiError(null);
     try {
       const health = await checkHealth();
-      if (health.model_loaded) {
-        setApiStatus('healthy');
-        const info = await getModelInfo();
-        setModelInfo(info);
-        setShowSettings(false); // Hide settings on successful connection
-      } else {
+      if (!health.model_loaded) {
         setApiStatus('error');
         setApiError('Model not loaded on server');
+        return;
+      }
+
+      // Check if auth is required and we don't have a key
+      if (health.auth_required && !hasApiKey()) {
+        setApiStatus('auth_required');
+        setApiError('API key required. Enter your key below.');
+        setShowSettings(true);
+        return;
+      }
+
+      // Try to get model info (this will verify the key if auth is enabled)
+      try {
+        const info = await getModelInfo();
+        setModelInfo(info);
+        setApiStatus('healthy');
+        setShowSettings(false);
+      } catch (infoErr) {
+        const errorMessage = infoErr instanceof Error ? infoErr.message : 'Failed to get model info';
+        // If we have a key but it's invalid
+        if (errorMessage.includes('401') || errorMessage.toLowerCase().includes('invalid')) {
+          setApiStatus('auth_required');
+          setApiError('Invalid API key. Please check your key and try again.');
+          setShowSettings(true);
+        } else {
+          setApiStatus('error');
+          setApiError(errorMessage);
+        }
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to connect to API';
-      // Check if it's an auth error
-      if (errorMessage.includes('401') || errorMessage.toLowerCase().includes('api key')) {
-        setApiStatus('auth_required');
-        setApiError('API key required. Enter your key below.');
-        setShowSettings(true); // Auto-show settings when auth is needed
-      } else {
-        setApiStatus('error');
-        setApiError(errorMessage);
-      }
+      setApiStatus('error');
+      setApiError(errorMessage);
     }
   }, [setModelInfo]);
 

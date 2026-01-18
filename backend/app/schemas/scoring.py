@@ -91,6 +91,10 @@ class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
     version: str
+    auth_required: bool = Field(
+        default=False,
+        description="Whether API key authentication is required for other endpoints"
+    )
 
 
 class ErrorResponse(BaseModel):

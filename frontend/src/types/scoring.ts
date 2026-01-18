@@ -58,6 +58,7 @@ export interface HealthResponse {
   status: 'healthy' | 'degraded';
   model_loaded: boolean;
   version: string;
+  auth_required: boolean;
 }
 
 // Light/Dark phase definition
