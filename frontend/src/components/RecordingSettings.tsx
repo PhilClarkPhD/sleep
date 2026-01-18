@@ -27,17 +27,23 @@ export function RecordingSettings() {
   const [newPhaseEnd, setNewPhaseEnd] = useState('19:00');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Convert ISO string to datetime-local format for input
+  // Convert stored timestamp to datetime-local format for input (local time)
   const formatForInput = (isoString: string | null): string => {
     if (!isoString) return '';
     const date = new Date(isoString);
-    // Format: YYYY-MM-DDTHH:MM
-    return date.toISOString().slice(0, 16);
+    // Format as local time: YYYY-MM-DDTHH:MM
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  // Convert datetime-local input to ISO string
+  // Convert datetime-local input to ISO string for storage
   const handleStartTimeChange = (value: string) => {
     if (value) {
+      // datetime-local gives us local time, Date constructor interprets it correctly
       setRecordingStartTime(new Date(value).toISOString());
     } else {
       setRecordingStartTime(null);
