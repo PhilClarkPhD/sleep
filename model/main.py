@@ -11,7 +11,10 @@ from sklearn.metrics import f1_score
 import pandas as pd
 import os
 from utils.load_config import load_config
-from data_processing.sleep_functions import apply_rule_based_filter
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
+from app.ml.sleep_functions import apply_rule_based_filter
 
 # Load the model config
 config_path = "/Users/phil/philclarkphd/sleep/model/model_config.json"

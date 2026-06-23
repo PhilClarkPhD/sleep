@@ -167,8 +167,8 @@ def score_locally(file_path: Path, start_epoch: int) -> tuple:
     from scipy.io import wavfile
 
     # Import local modules
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from data_processing.sleep_functions import apply_rule_based_filter, generate_features
+    sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
+    from app.ml.sleep_functions import apply_rule_based_filter, generate_features
 
     # Try to find and load model
     model, label_encoder = load_local_model()

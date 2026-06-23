@@ -11,7 +11,7 @@
 | Phase 5: CLI Tool | ✅ **COMPLETED** | `mora score` command |
 | Phase 6: Deployment | ✅ **COMPLETED** | Railway + Cloudflare Pages live |
 | Phase 7: Security | ✅ **COMPLETED** | API keys, rate limiting, logging |
-| Phase 8: PyQt5 Deprecation | 🔄 **IN PROGRESS** | Frontend feature parity achieved |
+| Phase 8: PyQt5 Deprecation | ✅ **COMPLETED** | Legacy code removed |
 
 **Branch:** `claude/refactor`
 
@@ -20,7 +20,7 @@
 - Backend: https://sleep-production.up.railway.app
 - API Docs: https://sleep-production.up.railway.app/docs
 
-**Next step:** Deploy latest changes, then finalize PyQt5 deprecation
+**Next step:** Revisit frontend UX, model architecture, and model evaluation
 
 ---
 
