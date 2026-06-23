@@ -56,6 +56,7 @@ class ScoringResponse(BaseModel):
 
     success: bool
     epochs: List[EpochScore]
+    unfiltered_epochs: List[EpochScore]
     summary: ScoringStats
     model_version: str
     samplerate: int

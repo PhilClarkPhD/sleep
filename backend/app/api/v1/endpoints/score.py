@@ -92,6 +92,7 @@ async def score_file(
         return ScoringResponse(
             success=True,
             epochs=result.epochs,
+            unfiltered_epochs=result.unfiltered_epochs,
             summary=result.summary,
             model_version=model_manager.version,
             samplerate=result.samplerate,

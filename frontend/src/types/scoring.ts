@@ -39,6 +39,7 @@ export interface SignalData {
 export interface ScoringResponse {
   success: boolean;
   epochs: EpochScore[];
+  unfiltered_epochs: EpochScore[];
   summary: ScoringStats;
   model_version: string;
   samplerate: number;

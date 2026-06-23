@@ -24,6 +24,7 @@ class ScoringResult:
     """Internal result container for scoring."""
 
     epochs: List[EpochScore]
+    unfiltered_epochs: List[EpochScore]
     summary: ScoringStats
     samplerate: int
     baseline_epoch: int
@@ -183,22 +184,21 @@ class ScoringService:
         logger.info(f"Running predictions on {len(features)} epochs")
         predictions = self.model_manager.predict(features)
 
-        # Step 5: Apply rule-based filter
-        filtered_predictions = sleep.apply_rule_based_filter(predictions)
-
-        # Step 6: Build epoch list with timestamps
+        # Step 5: Build unfiltered epoch list
         epoch_duration = settings.EPOCH_DURATION_SECONDS
-        epochs = []
-        for i, score in enumerate(filtered_predictions):
-            epochs.append(
-                EpochScore(
-                    epoch=i,
-                    score=score,
-                    timestamp_seconds=i * epoch_duration,
-                )
-            )
+        unfiltered_epochs = [
+            EpochScore(epoch=i, score=score, timestamp_seconds=i * epoch_duration)
+            for i, score in enumerate(predictions)
+        ]
 
-        # Step 7: Compute summary statistics
+        # Step 6: Apply rule-based filter
+        filtered_predictions = sleep.apply_rule_based_filter(predictions)
+        epochs = [
+            EpochScore(epoch=i, score=score, timestamp_seconds=i * epoch_duration)
+            for i, score in enumerate(filtered_predictions)
+        ]
+
+        # Step 7: Compute summary statistics (from filtered)
         total = len(filtered_predictions)
         wake_count = filtered_predictions.count("Wake")
         nrem_count = filtered_predictions.count("Non REM")
@@ -227,6 +227,7 @@ class ScoringService:
 
         return ScoringResult(
             epochs=epochs,
+            unfiltered_epochs=unfiltered_epochs,
             summary=summary,
             samplerate=samplerate,
             baseline_epoch=start_epoch,

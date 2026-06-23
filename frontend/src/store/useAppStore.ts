@@ -20,7 +20,10 @@ interface AppState {
   fileName: string | null;
 
   // Scoring results
-  epochs: EpochScore[];
+  epochs: EpochScore[];          // Currently displayed (filtered or unfiltered)
+  filteredEpochs: EpochScore[];  // Stored separately for toggling
+  unfilteredEpochs: EpochScore[];
+  showFiltered: boolean;
   summary: ScoringStats | null;
   modelVersion: string | null;
   samplerate: number | null;
@@ -52,11 +55,13 @@ interface AppState {
   setBaselineEpoch: (epoch: number) => void;
   setScoringResults: (
     epochs: EpochScore[],
+    unfilteredEpochs: EpochScore[],
     summary: ScoringStats,
     modelVersion: string,
     samplerate: number,
     signalData?: SignalData
   ) => void;
+  toggleFilter: () => void;
   setModelInfo: (info: ModelInfo) => void;
 
   // Navigation actions
@@ -90,6 +95,9 @@ const initialState = {
   errorMessage: null,
   fileName: null,
   epochs: [] as EpochScore[],
+  filteredEpochs: [] as EpochScore[],
+  unfilteredEpochs: [] as EpochScore[],
+  showFiltered: true,
   summary: null,
   modelVersion: null,
   samplerate: null,
@@ -117,8 +125,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setBaselineEpoch: (baselineEpoch) => set({ baselineEpoch }),
 
-  setScoringResults: (epochs, summary, modelVersion, samplerate, signalData) => set({
+  setScoringResults: (epochs, unfilteredEpochs, summary, modelVersion, samplerate, signalData) => set({
     epochs,
+    filteredEpochs: epochs,
+    unfilteredEpochs,
+    showFiltered: true,
     summary,
     modelVersion,
     samplerate,
@@ -128,6 +139,34 @@ export const useAppStore = create<AppState>((set, get) => ({
     editedEpochs: new Set<number>(),
     hasUnsavedChanges: false,
   }),
+
+  toggleFilter: () => {
+    const { showFiltered, filteredEpochs, unfilteredEpochs } = get();
+    const newShowFiltered = !showFiltered;
+    const activeEpochs = newShowFiltered ? filteredEpochs : unfilteredEpochs;
+
+    // Recalculate summary from the active epochs
+    const total = activeEpochs.length;
+    const wakeCount = activeEpochs.filter(e => e.score === 'Wake').length;
+    const nremCount = activeEpochs.filter(e => e.score === 'Non REM').length;
+    const remCount = activeEpochs.filter(e => e.score === 'REM').length;
+
+    set({
+      showFiltered: newShowFiltered,
+      epochs: activeEpochs,
+      summary: {
+        total_epochs: total,
+        wake_count: wakeCount,
+        wake_percent: Math.round((wakeCount / total) * 10000) / 100,
+        nrem_count: nremCount,
+        nrem_percent: Math.round((nremCount / total) * 10000) / 100,
+        rem_count: remCount,
+        rem_percent: Math.round((remCount / total) * 10000) / 100,
+        recording_duration_seconds: total * 10,
+        recording_duration_hours: (total * 10) / 3600,
+      },
+    });
+  },
 
   setModelInfo: (modelInfo) => set({ modelInfo }),
 

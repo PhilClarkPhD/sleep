@@ -6,7 +6,8 @@ import { useAppStore } from '../store/useAppStore';
 import { SLEEP_COLORS } from '../types/scoring';
 
 export function ScoringResults() {
-  const { summary, modelVersion, samplerate, fileName } = useAppStore();
+  const { summary, modelVersion, samplerate, fileName, showFiltered, unfilteredEpochs, toggleFilter } = useAppStore();
+  const hasUnfilteredData = unfilteredEpochs.length > 0;
 
   if (!summary) {
     return null;
@@ -45,6 +46,25 @@ export function ScoringResults() {
         <div className="text-right text-sm text-gray-500">
           <div>Model: XGBoost v{modelVersion}</div>
           <div>Sample rate: {samplerate} Hz</div>
+          {hasUnfilteredData && (
+            <label className="flex items-center gap-2 mt-2 cursor-pointer justify-end">
+              <span className={showFiltered ? 'font-medium text-gray-700' : 'text-gray-400'}>
+                Post-processing filter
+              </span>
+              <button
+                onClick={toggleFilter}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  showFiltered ? 'bg-blue-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                    showFiltered ? 'translate-x-4.5' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </label>
+          )}
         </div>
       </div>
 

@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     )
 
     # Feature columns expected by the model (in order)
+    # Canonical list lives in model/config.py — keep in sync
     FEATURE_COLS: List[str] = [
         "EEG_quantile_80",
         "EEG_ptp",

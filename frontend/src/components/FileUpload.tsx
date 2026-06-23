@@ -54,6 +54,7 @@ export function FileUpload() {
       if (result.success) {
         setScoringResults(
           result.epochs,
+          result.unfiltered_epochs,
           result.summary,
           result.model_version,
           result.samplerate,
