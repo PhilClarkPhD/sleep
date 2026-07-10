@@ -30,7 +30,11 @@ export function EpochViewer() {
     setWindowSize,
     updateEpochScore,
     hasUnsavedChanges,
+    yAxisRanges,
+    resetYAxisRanges,
   } = useAppStore();
+
+  const yAxisIsManual = yAxisRanges.eeg !== null || yAxisRanges.emg !== null;
 
   const [findEpochInput, setFindEpochInput] = useState('');
   const [showFindDialog, setShowFindDialog] = useState(false);
@@ -164,6 +168,23 @@ export function EpochViewer() {
             <option value={5}>5 epochs</option>
             <option value={7}>7 epochs</option>
           </select>
+        </div>
+
+        {/* Y-axis controls */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">
+            Y-axis: <span className={yAxisIsManual ? 'text-blue-700 font-medium' : ''}>
+              {yAxisIsManual ? 'locked' : 'auto'}
+            </span>
+          </span>
+          <button
+            onClick={resetYAxisRanges}
+            disabled={!yAxisIsManual}
+            className="px-3 py-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm"
+            title="Clear the fixed Y-axis and go back to auto-scaling"
+          >
+            Reset Y-axis
+          </button>
         </div>
 
         {/* Current score display */}

@@ -39,6 +39,10 @@ interface AppState {
   currentEpoch: number;
   windowSize: number;  // Number of epochs visible (1, 3, 5, or 7)
 
+  // Y-axis display state — manual range per signal that persists across epochs.
+  // null means auto-fit to the visible window (default).
+  yAxisRanges: { eeg: [number, number] | null; emg: [number, number] | null };
+
   // Editing state
   editedEpochs: Set<number>;  // Tracks which epochs have been manually edited
   hasUnsavedChanges: boolean;
@@ -70,6 +74,8 @@ interface AppState {
   goToPrevEpoch: () => void;
   goToNextREM: () => void;
   setWindowSize: (size: number) => void;
+  setYAxisRange: (signal: 'eeg' | 'emg', range: [number, number] | null) => void;
+  resetYAxisRanges: () => void;
 
   // Scoring actions
   updateEpochScore: (epoch: number, score: SleepState) => void;
@@ -106,6 +112,7 @@ const initialState = {
   modelInfo: null,
   currentEpoch: 0,
   windowSize: 5,
+  yAxisRanges: { eeg: null, emg: null } as { eeg: [number, number] | null; emg: [number, number] | null },
   editedEpochs: new Set<number>(),
   hasUnsavedChanges: false,
   recordingStartTime: null as string | null,
@@ -211,6 +218,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setWindowSize: (windowSize) => set({ windowSize }),
+
+  setYAxisRange: (signal, range) => set((state) => ({
+    yAxisRanges: { ...state.yAxisRanges, [signal]: range },
+  })),
+
+  resetYAxisRanges: () => set({ yAxisRanges: { eeg: null, emg: null } }),
 
   // Scoring actions
   updateEpochScore: (epoch, score) => {

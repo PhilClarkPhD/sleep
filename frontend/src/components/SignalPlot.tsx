@@ -24,7 +24,12 @@ export function SignalPlot({ title, signalType, height = 200 }: SignalPlotProps)
     windowSize,
     recordingStartTime,
     getTimestampForEpoch,
+    yAxisRanges,
+    setYAxisRange,
   } = useAppStore();
+
+  // User-set y-range for this signal, persisted across epochs (null = auto-fit).
+  const manualRange = yAxisRanges[signalType];
 
   if (!signalData || epochs.length === 0) {
     return (
@@ -94,10 +99,48 @@ export function SignalPlot({ title, signalType, height = 200 }: SignalPlotProps)
     }
   }
 
-  // Calculate y-axis range
-  const yMin = Math.min(...yData.filter(y => isFinite(y)));
-  const yMax = Math.max(...yData.filter(y => isFinite(y)));
-  const yPadding = (yMax - yMin) * 0.1;
+  // Calculate y-axis range.
+  // If the user has set a range on the axis, use it and keep it fixed as they
+  // navigate epochs. Otherwise auto-fit to the visible window.
+  let yRange: [number, number];
+  if (manualRange) {
+    yRange = manualRange;
+  } else {
+    const finiteY = yData.filter(y => isFinite(y));
+    const yMin = Math.min(...finiteY);
+    const yMax = Math.max(...finiteY);
+    const yPadding = (yMax - yMin) * 0.1;
+    yRange = [yMin - yPadding, yMax + yPadding];
+  }
+
+  // Capture manual axis edits (drag-zoom or typing an endpoint) so they persist.
+  // Double-clicking the plot autoranges, which clears the manual range.
+  // Note: editing a single endpoint fires only that one key (e.g. just
+  // "yaxis.range[1]"), so merge partial edits with the current range.
+  const handleRelayout = (e: Record<string, unknown>) => {
+    if (e['yaxis.autorange']) {
+      setYAxisRange(signalType, null);
+      return;
+    }
+
+    // Plotly sometimes sends the whole range as an array under "yaxis.range".
+    const arr = e['yaxis.range'];
+    if (Array.isArray(arr) && arr.length === 2) {
+      const lo = Number(arr[0]);
+      const hi = Number(arr[1]);
+      if (isFinite(lo) && isFinite(hi)) setYAxisRange(signalType, [lo, hi]);
+      return;
+    }
+
+    const rawLo = e['yaxis.range[0]'];
+    const rawHi = e['yaxis.range[1]'];
+    if (rawLo === undefined && rawHi === undefined) return; // not a y-axis change
+
+    const current = manualRange ?? yRange;
+    const lo = rawLo !== undefined ? Number(rawLo) : current[0];
+    const hi = rawHi !== undefined ? Number(rawHi) : current[1];
+    if (isFinite(lo) && isFinite(hi)) setYAxisRange(signalType, [lo, hi]);
+  };
 
   return (
     <Plot
@@ -129,7 +172,7 @@ export function SignalPlot({ title, signalType, height = 200 }: SignalPlotProps)
           title: { text: signalType === 'eeg' ? 'EEG (μV)' : 'EMG (μV)' },
           showgrid: true,
           gridcolor: '#e5e7eb',
-          range: [yMin - yPadding, yMax + yPadding],
+          range: yRange,
         },
         shapes: shapes as Layout['shapes'],
         margin: { l: 60, r: 20, t: 40, b: 40 },
@@ -140,7 +183,23 @@ export function SignalPlot({ title, signalType, height = 200 }: SignalPlotProps)
       config={{
         displayModeBar: false,
         responsive: true,
+        // Allow clicking the axis min/max labels to type a value; keep everything
+        // else (titles, shapes, legend) locked so only the axis range is editable.
+        editable: true,
+        edits: {
+          axisTitleText: false,
+          titleText: false,
+          annotationText: false,
+          annotationPosition: false,
+          annotationTail: false,
+          legendText: false,
+          legendPosition: false,
+          colorbarTitleText: false,
+          colorbarPosition: false,
+          shapePosition: false,
+        },
       }}
+      onRelayout={handleRelayout}
       style={{ width: '100%' }}
     />
   );
