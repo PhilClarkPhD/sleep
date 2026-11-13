@@ -1,6 +1,7 @@
 # Guide: run the tests
 
-Run from the repo root with the venv active. `requirements.txt` already includes
+Run from the repo root with the venv active (Mac: `source .venv/bin/activate`;
+Windows: `.\.venv\Scripts\Activate.ps1`). `requirements.txt` already includes
 `pytest` and `httpx`.
 
 ```bash

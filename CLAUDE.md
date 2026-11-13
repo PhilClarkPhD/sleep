@@ -26,7 +26,8 @@ the output.
 - `FEATURE_CODE_VERSION` in `sleep_features/config.py` must be bumped when feature math changes (MAJOR) or columns are added (MINOR).
 - `training_data/`, `feature_store/`, `model_cards/` are not in git.
 - Run `pytest -q` (unit + integration) and `cd frontend && npm run build` before calling a change done.
-- The original developer's shell aliases `head`; use `sed -n '1,20p'` in commands you suggest.
+- The successor may be on Windows (PowerShell). Translate shell commands (`source`, `rm`, `cp`, env vars) per the cheat sheet in `docs/guides/SETUP_WINDOWS.md`. Start scripts live in `scripts/windows/` and `scripts/mac/`.
+- The original developer's Mac shell aliases `head`; use `sed -n '1,20p'` in commands you suggest.
 
 ## Decisions already made (don't reopen without new evidence)
 

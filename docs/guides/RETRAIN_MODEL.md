@@ -7,8 +7,11 @@ Prerequisites: `SETUP.md` done, `training_data/` in place (`docs/DATA_FORMATS.md
 All commands run from the repo root with the venv active:
 
 ```bash
-cd sleep && source .venv/bin/activate
+cd sleep && source .venv/bin/activate        # Windows: cd sleep; .\.venv\Scripts\Activate.ps1
 ```
+
+Windows users: the `python -m ...` commands below are identical; `rm`/`cp` in
+step 4 become `Remove-Item`/`Copy-Item` (cheat sheet in `SETUP_WINDOWS.md`).
 
 The pipeline has three steps. Each produces a file the next one reads.
 
@@ -118,9 +121,17 @@ label problem than a model problem; run `python -m model.experiments.diagnose_an
 ## Step 4: promote to the app
 
 ```bash
+# Mac / Linux
 rm backend/models/*.pkl
 cp model_artifacts/XGBoost_<new>/XGBoost_<new>.pkl backend/models/
 cp model_artifacts/XGBoost_<new>/XGBoost_<new>_ood.pkl backend/models/
+```
+
+```powershell
+# Windows
+Remove-Item backend\models\*.pkl
+Copy-Item model_artifacts\XGBoost_<new>\XGBoost_<new>.pkl backend\models\
+Copy-Item model_artifacts\XGBoost_<new>\XGBoost_<new>_ood.pkl backend\models\
 ```
 
 The backend serves whatever single `.pkl` is in `backend/models/` (the newest if

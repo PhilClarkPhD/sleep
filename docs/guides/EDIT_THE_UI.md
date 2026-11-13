@@ -18,6 +18,9 @@ cd backend && source ../.venv/bin/activate && uvicorn app.main:app --reload --po
 cd frontend && npm run dev        # http://localhost:3000
 ```
 
+(Or the start scripts in `scripts/windows/` and `scripts/mac/`. Hot reload works
+either way.)
+
 Edit a file under `frontend/src/`, save, the browser updates in place (state is
 usually kept, so you don't have to re-upload after every edit). Open the browser's
 developer console (F12) to see errors.

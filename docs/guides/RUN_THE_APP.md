@@ -1,13 +1,31 @@
 # Guide: run the GUI locally and score a recording
 
-Prerequisite: `SETUP.md` done. You need two terminal windows: one for the Python
-backend, one for the frontend. Both stay running while you use the app.
+Prerequisite: `SETUP.md` (Mac) or `SETUP_WINDOWS.md` done. You need two terminal
+windows: one for the Python backend, one for the frontend. Both stay running while
+you use the app.
+
+**The easy way.** Windows: in File Explorer open `sleep\scripts\windows\` and
+double-click `start_backend.bat`, then `start_gui.bat`. Mac: in two terminals run
+`bash scripts/mac/start_backend.sh` and `bash scripts/mac/start_gui.sh`. Each opens
+a window that stays open; skip to step 3. The rest of this page is the same thing
+by hand, for when you need to see what is going on.
 
 ## 1. Start the backend (API)
+
+Mac / Linux:
 
 ```bash
 cd sleep                      # repo root
 source .venv/bin/activate
+cd backend
+uvicorn app.main:app --reload --port 8000
+```
+
+Windows (PowerShell):
+
+```powershell
+cd sleep
+.\.venv\Scripts\Activate.ps1
 cd backend
 uvicorn app.main:app --reload --port 8000
 ```
@@ -91,12 +109,19 @@ To serve a different model, put its `.pkl` and `_ood.pkl` there, delete the old 
 restart the backend. To point somewhere else without copying:
 
 ```bash
+# Mac / Linux
 MORA_MODEL_PATH=../model_artifacts/XGBoost_1.2.3/XGBoost_1.2.3.pkl uvicorn app.main:app --port 8000
+```
+
+```powershell
+# Windows
+$env:MORA_MODEL_PATH = "..\model_artifacts\XGBoost_1.2.3\XGBoost_1.2.3.pkl"
+uvicorn app.main:app --port 8000
 ```
 
 ## Stopping
 
-Ctrl+C in each terminal.
+Ctrl+C in each terminal (or just close the window on Windows).
 
 ## Is there an online version?
 

@@ -1,7 +1,8 @@
 # Guide: score from the command line
 
 For scoring many files, scripting, or checking a model without the GUI.
-Prerequisite: `SETUP.md` (the root `requirements.txt` includes the CLI deps).
+Prerequisite: `SETUP.md` or `SETUP_WINDOWS.md` (the root `requirements.txt` includes
+the CLI deps). Activate the venv first; on Windows use `python cli\mora_cli.py`.
 
 ## Two modes
 
@@ -99,6 +100,8 @@ or `MORA_MODEL_PATH` if set:
 ```bash
 MORA_MODEL_PATH=model_artifacts/XGBoost_1.2.3/XGBoost_1.2.3.pkl python cli/mora_cli.py score file.wav
 ```
+
+Windows: `$env:MORA_MODEL_PATH = "model_artifacts\XGBoost_1.2.3\XGBoost_1.2.3.pkl"` on its own line first.
 
 ## Troubleshooting
 

@@ -25,7 +25,8 @@ Open the file, paste it (or point your assistant at it), and say what you want t
 
 | I want to... | Read this | Needs |
 |---|---|---|
-| Set up my computer for the first time | [docs/guides/SETUP.md](docs/guides/SETUP.md) | Python, Node |
+| Set up a Windows computer for the first time | [docs/guides/SETUP_WINDOWS.md](docs/guides/SETUP_WINDOWS.md) | Nothing; installs everything |
+| Set up a Mac for the first time | [docs/guides/SETUP.md](docs/guides/SETUP.md) | Python, Node |
 | Run the GUI on my own machine and score a recording | [docs/guides/RUN_THE_APP.md](docs/guides/RUN_THE_APP.md) | Setup done |
 | Understand how the pieces fit together | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Nothing |
 | Retrain the model (new recordings, new labels) | [docs/guides/RETRAIN_MODEL.md](docs/guides/RETRAIN_MODEL.md) | Setup, labeled data |
@@ -47,10 +48,16 @@ project brief. Read it, then the guide matching the user's task.
 
 ## Quick start (after setup)
 
+Windows: double-click `scripts\windows\start_backend.bat`, then
+`scripts\windows\start_gui.bat`. Mac: `bash scripts/mac/start_backend.sh` and
+`bash scripts/mac/start_gui.sh` in two terminals. Then open http://localhost:3000.
+
+By hand:
+
 ```bash
 # Terminal 1 - API
 cd backend
-source ../.venv/bin/activate
+source ../.venv/bin/activate        # Windows: ..\.venv\Scripts\Activate.ps1
 uvicorn app.main:app --reload --port 8000
 
 # Terminal 2 - GUI
@@ -68,6 +75,7 @@ sleep_features/     Feature engineering package: WAV -> per-epoch feature table 
 model/              train.py, evaluate.py, diagnostics, cross-validation, model_config.json
 model/experiments/  Research scripts behind the v2 feature decisions (not used in production)
 cli/                mora_cli.py: score files locally or via the API
+scripts/            Double-click / one-line scripts: setup, start backend, start GUI (windows/ and mac/)
 tests/              pytest suite (unit + integration + golden sample)
 docs/               All documentation (guides/ = task walkthroughs; archive/ = history)
 model_artifacts/    Every trained model, one folder per version (committed)

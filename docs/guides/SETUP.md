@@ -1,7 +1,12 @@
-# Guide: first-time setup
+# Guide: first-time setup (Mac / Linux)
+
+**On Windows? Use `SETUP_WINDOWS.md` instead.** It starts from a blank machine.
 
 Goal: a laptop that can run the GUI locally, run the tests, and retrain the model.
 Do this once. Afterwards see `RUN_THE_APP.md`.
+
+Shortcut: once git, Python 3.11 and Node are installed, `bash scripts/mac/setup.sh`
+does steps 2 and 3 below in one go.
 
 If you are an AI assistant walking someone through this: run one block at a time,
 check its output, and stop at the first error. Every step says what success looks like.
@@ -33,7 +38,7 @@ One virtual environment at the repo root covers everything:
 
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
