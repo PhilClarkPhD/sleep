@@ -8,7 +8,7 @@ Prerequisite: `SETUP.md` (the root `requirements.txt` includes the CLI deps).
 | Mode | Command | Runs where | Needs |
 |---|---|---|---|
 | Local | `python cli/mora_cli.py score file.wav` | your machine, the `.pkl` in `backend/models/` | Python env from SETUP |
-| API | `python cli/mora_cli.py score file.wav --api` | the deployed Railway backend | internet; `--api-key` if auth is on |
+| API | `python cli/mora_cli.py score file.wav --api` | a running backend, `http://localhost:8000` by default | backend started (`RUN_THE_APP.md`); `--api-key` only if auth is on |
 
 Both run the **same scoring code** as the web app (`backend/app/services/scoring_service.py`),
 so results match the GUI: unfiltered scores, signal-QC `Unscored` epochs, and the
@@ -32,7 +32,7 @@ Options:
 
 - `-o, --output PATH`: write `epoch,score` CSV (same first two columns as the GUI export).
 - `--api`: use the remote server instead of the local model.
-- `--api-url URL`: another server (default: the Railway deployment).
+- `--api-url URL`: which backend (default `http://localhost:8000`; a hosted URL if you have one).
 - `--api-key KEY`: sent as `X-API-Key`. Or set the environment variable `MORA_API_KEY`.
 - `--start-epoch N`: baseline epoch for the legacy model (default 2, same as the API). Ignored by `robust_mad` models.
 - `--json`: machine-readable output: `{"scores": [...], "summary": {...}}`.
@@ -82,8 +82,8 @@ line, and keeps going if one file fails.
 python cli/mora_cli.py info [--api-url URL] [--api-key KEY]
 ```
 
-Prints model name, version, classes, and feature columns from the remote API.
-For the local model, start the backend and open http://localhost:8000/api/v1/model/info.
+Prints model name, version, classes, and feature columns from a running backend
+(local by default). Same information as http://localhost:8000/api/v1/model/info.
 
 ## Scripting
 
@@ -104,6 +104,7 @@ MORA_MODEL_PATH=model_artifacts/XGBoost_1.2.3/XGBoost_1.2.3.pkl python cli/mora_
 
 - `Local scoring needs the backend dependencies`: activate the venv and
   `pip install -r requirements.txt` from the repo root, or use `--api`.
+- `Connection refused` with `--api`: the backend isn't running. Start it (`RUN_THE_APP.md`) or drop `--api` to score in-process.
 - `The API requires a key`: pass `--api-key` or set `MORA_API_KEY`.
 - `Expected .wav file`: the file extension must be `.wav`.
 - Very slow first run locally: XGBoost and SciPy import time; subsequent runs are faster.

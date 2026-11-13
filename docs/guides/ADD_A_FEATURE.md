@@ -43,7 +43,7 @@ columns.
    dimensionless → leave raw.
 4. **Bump `FEATURE_CODE_VERSION`** in `config.py`: MINOR (`1.0.0` → `1.1.0`) for a
    new column with old columns unchanged; MAJOR if you changed how an existing
-   column is computed (every deployed model would then be refused by the backend
+   column is computed (every existing model would then be refused by the backend
    until retrained, which is the point).
 5. **Test it.** Add a unit test in `tests/unit/test_feature_set_v2.py` (or a new
    file) that builds a tiny synthetic recording and checks the column exists, is
@@ -68,7 +68,7 @@ columns.
    Look at pooled kappa and REM recall, and the per-animal table. A feature that
    helps the average but hurts two animals is suspicious.
 8. **If it wins**, add the column to `feature_cols` in `model/model_config.json`,
-   retrain per `RETRAIN_MODEL.md` with a MINOR version bump, promote, deploy.
+   retrain per `RETRAIN_MODEL.md` with a MINOR version bump, promote.
 
 ## What has already been tried (don't repeat)
 

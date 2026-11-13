@@ -6,15 +6,15 @@ Command-line interface for scoring EEG/EMG recordings.
 
 Usage:
     mora score recording.wav                    # Score locally
-    mora score recording.wav --api              # Score via API
+    mora score recording.wav --api              # Score via a running backend
     mora score recording.wav -o scores.csv      # Export to CSV
 
 Examples:
     # Score a file locally (requires backend deps + model file)
     mora score path/to/recording.wav
 
-    # Score using the remote API
-    mora score path/to/recording.wav --api --api-url https://sleep-production.up.railway.app
+    # Score via a running backend (local by default)
+    mora score path/to/recording.wav --api [--api-url http://host:8000]
 
     # Score and export to CSV
     mora score path/to/recording.wav -o results.csv
@@ -36,7 +36,7 @@ for _p in (_REPO_ROOT, _BACKEND_DIR):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-DEFAULT_API_URL = "https://sleep-production.up.railway.app"
+DEFAULT_API_URL = "http://localhost:8000"  # a locally running backend; pass --api-url for a hosted one
 
 import click
 
@@ -183,7 +183,8 @@ def info(api_url: str, api_key: Optional[str]):
         click.echo(f"  Features: {len(data.get('feature_columns', []))} columns")
 
     except requests.RequestException as e:
-        click.echo(f"Error connecting to API: {e}", err=True)
+        click.echo(f"Error connecting to API at {api_url}: {e}", err=True)
+        click.echo("Is the backend running? See docs/guides/RUN_THE_APP.md.", err=True)
         sys.exit(1)
 
 

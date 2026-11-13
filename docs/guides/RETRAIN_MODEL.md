@@ -15,7 +15,7 @@ The pipeline has three steps. Each produces a file the next one reads.
 ```
 training_data/   ──(1) build feature store──▶  feature_store/features_<timestamp>.csv (+ .manifest.json)
 feature store    ──(2) train────────────────▶  model_artifacts/<model_id>/<model_id>.pkl, _ood.pkl, _test_data.csv
-model artifact   ──(3) promote──────────────▶  backend/models/  (then restart / deploy)
+model artifact   ──(3) promote──────────────▶  backend/models/  (then restart the backend)
 ```
 
 ## Step 1: build the feature store
@@ -128,8 +128,9 @@ there are several). Restart it (`RUN_THE_APP.md`) and confirm
 http://localhost:8000/api/v1/model/info shows the new version. Score
 `sample_data/sample_signal.wav` and a real recording in the GUI as a smoke test.
 
-To put it online: commit and push (`DEPLOY.md`). The Docker image copies
-`backend/models/` in, so the pushed `.pkl` is what Railway serves.
+Commit and push so the repo records which model is current. (If the app is ever
+hosted again, the Docker image copies `backend/models/` in, so the committed `.pkl`
+is what gets served; see `DEPLOY.md`.)
 
 ## Step 5: record it
 

@@ -98,7 +98,7 @@ MORA_MODEL_PATH=../model_artifacts/XGBoost_1.2.3/XGBoost_1.2.3.pkl uvicorn app.m
 
 Ctrl+C in each terminal.
 
-## Using the deployed app instead
+## Is there an online version?
 
-https://sleep-cz3.pages.dev needs no setup at all and runs the same code. Use the
-local version when you want to test a new model or a UI change before deploying.
+Not any more. The hosted copy was shut down in November 2026. Running locally is
+the normal way to use the app. `DEPLOY.md` explains how to host it again if needed.

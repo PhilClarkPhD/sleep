@@ -99,8 +99,7 @@ There is no frontend test suite. Test by hand: upload `sample_data/sample_signal
 export). Check Chrome and one of Safari/Firefox if you touched export or file
 handling.
 
-## Deploying
+## Sharing the change
 
-Push to `claude/refactor`; Cloudflare Pages rebuilds in a couple of minutes.
-`DEPLOY.md` has the details and what to do if the build fails there but works locally
-(usually: a lint/type error that `npm run build` would have caught).
+Commit and push to `claude/refactor`. Anyone running locally gets it with
+`git pull` and a restart of `npm run dev`. Hosting is optional; see `DEPLOY.md`.

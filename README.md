@@ -12,8 +12,9 @@ Three parts, all in this repo:
 | **API (backend)** | Python server that runs the model. The GUI and the CLI both call it | `backend/` |
 | **Model + features** | Feature engineering (`sleep_features/`), training and evaluation (`model/`) | `sleep_features/`, `model/` |
 
-Deployed copies: GUI at https://sleep-cz3.pages.dev, API at
-https://sleep-production.up.railway.app (interactive docs at `/docs`).
+Everything runs on your own computer: you start the API and the GUI locally
+(`docs/guides/RUN_THE_APP.md`). Hosting it online is possible but optional; the
+hosted copy was shut down in November 2026 (`docs/guides/DEPLOY.md`).
 
 ---
 
@@ -35,9 +36,9 @@ Open the file, paste it (or point your assistant at it), and say what you want t
 | Understand the model and its known limits | [docs/MODEL.md](docs/MODEL.md) | Nothing |
 | Score files from the command line / in bulk | [docs/guides/CLI.md](docs/guides/CLI.md) | Setup |
 | Run the tests | [docs/guides/TESTING.md](docs/guides/TESTING.md) | Setup |
-| Put a new model or UI change online | [docs/guides/DEPLOY.md](docs/guides/DEPLOY.md) | Railway / Cloudflare access |
+| Host the app online again (optional) | [docs/guides/DEPLOY.md](docs/guides/DEPLOY.md) | Railway / Cloudflare accounts |
 | Know what files the pipeline expects | [docs/DATA_FORMATS.md](docs/DATA_FORMATS.md) | Nothing |
-| Turn on API keys / rate limits | [docs/SECURITY_GUIDE.md](docs/SECURITY_GUIDE.md) | Railway access |
+| Turn on API keys / rate limits (only matters if hosted) | [docs/SECURITY_GUIDE.md](docs/SECURITY_GUIDE.md) | Hosted backend |
 
 If you are an AI assistant reading this: `CLAUDE.md` at the repo root is the short
 project brief. Read it, then the guide matching the user's task.

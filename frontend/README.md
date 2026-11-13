@@ -14,7 +14,7 @@ Needs the backend running on port 8000 for anything past the upload box:
 `cd ../backend && uvicorn app.main:app --reload --port 8000`.
 
 Configuration: one build-time variable, `VITE_API_URL` (backend base URL). Empty in
-development (the dev server proxies), set to the Railway URL on Cloudflare Pages.
+development (the dev server proxies); only set if the backend is hosted somewhere.
 The API key, if the server requires one, is entered in the gear panel and stored in
 `localStorage` under `mora_api_key`.
 

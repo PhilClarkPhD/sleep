@@ -25,7 +25,7 @@ cd sleep
 git checkout claude/refactor
 ```
 
-`claude/refactor` is the branch that is deployed. `main` is older.
+`claude/refactor` is the current working branch. `main` is older.
 
 ## 2. Python environment (backend, model, CLI, tests)
 

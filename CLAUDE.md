@@ -17,7 +17,7 @@ the output.
 
 ## Facts that are easy to get wrong
 
-- Production branch is `claude/refactor`; pushing to it deploys (Railway + Cloudflare Pages).
+- Everything runs locally (backend on :8000, GUI on :3000). Working branch is `claude/refactor`. The hosted Railway/Cloudflare copy was shut down in Nov 2026; `docs/guides/DEPLOY.md` is only for re-hosting.
 - The backend serves whichever `.pkl` is in `backend/models/` (newest if several). Promote a model by copying its `.pkl` and `_ood.pkl` there.
 - A model's metadata (feature columns, normalization strategy, feature-code version, OOD file) tells the backend how to featurize. Never hardcode feature lists in serving code.
 - Default scores are **unfiltered**. The rule-based filter is a UI toggle only. Single-epoch REM counts as real in this lab.

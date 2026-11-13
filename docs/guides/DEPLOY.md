@@ -1,8 +1,15 @@
-# Guide: deploy (put a new model or UI change online)
+# Guide: host the app online (optional)
 
-The short version: **commit, push to `claude/refactor`, wait two minutes.** Both
-hosts watch that branch. This guide is the long version, for when it doesn't work
-or you need to change a setting.
+**Status: not currently hosted.** The Railway backend was shut down in November
+2026 to stop the monthly cost, and the Cloudflare Pages frontend has nothing to
+talk to without it. Everyone runs the app locally (`RUN_THE_APP.md`). Keep this
+guide for the day someone wants a shared URL again; the config files
+(`backend/Dockerfile`, `railway.json`, `docker-compose.yml`, `frontend/Dockerfile`)
+are still in the repo and worked as of the shutdown.
+
+When it was live, the flow was: **commit, push to `claude/refactor`, wait two
+minutes.** Both hosts watched that branch. The rest of this page records the
+settings that made that work.
 
 ## Where things run
 

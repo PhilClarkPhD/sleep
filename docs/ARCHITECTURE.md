@@ -108,15 +108,15 @@ One page. State lives in a single store (`src/store/useAppStore.ts`). The page
 talks to the backend through `src/api/sleepApi.ts` only. Full description in
 `docs/GUI_DESIGN.md`; how to change it in `docs/guides/EDIT_THE_UI.md`.
 
-In development, the Vite dev server (port 3000) forwards `/api` requests to the
-backend on port 8000, so no configuration is needed. In production the build is
-given `VITE_API_URL` pointing at the Railway backend.
+The Vite dev server (port 3000) forwards `/api` requests to the backend on port
+8000, so no configuration is needed when running locally. If the app is ever
+hosted, the build is given `VITE_API_URL` pointing at the hosted backend.
 
 ### `cli/` : command line
 
 `mora score file.wav` runs the exact same `ScoringService` as the backend, in-process.
-`mora score file.wav --api` uploads to the deployed backend instead. `mora batch` does
-a folder. See `docs/guides/CLI.md`.
+`mora score file.wav --api` sends the file to a running backend (local by default)
+instead. `mora batch` does a folder. See `docs/guides/CLI.md`.
 
 ## Key concepts for newcomers
 
@@ -129,8 +129,8 @@ just sends a file and receives JSON. The user needs nothing installed.
 `http://localhost:8000/docs` while the backend runs to see and try every endpoint.
 
 **What is Docker?** A recipe (`backend/Dockerfile`) that builds a self-contained
-Linux image with Python, the libraries, the code, and the model. Railway builds and
-runs that image. You don't need Docker locally; the guides run things directly.
+Linux image with Python, the libraries, the code, and the model. A hosting service
+would build and run that image. You don't need Docker; the guides run things directly.
 
 **Where does the model's "truth" come from?** `training_data/` (not in git): WAVs
 plus hand-scored label files. `docs/DATA_FORMATS.md` describes the layout.
@@ -138,21 +138,18 @@ plus hand-scored label files. `docs/DATA_FORMATS.md` describes the layout.
 ## Build time vs run time
 
 - **Training** happens on a laptop, by hand, occasionally. Output: a `.pkl`.
-- **Deploying** happens when you push to GitHub: Railway rebuilds the backend
-  image (with whatever `.pkl` is in `backend/models/`), Cloudflare Pages rebuilds
-  the frontend. Minutes.
+- **Promoting** a model means copying its `.pkl` into `backend/models/` and
+  restarting the backend. Seconds.
 - **Scoring** happens every time someone uploads a file. Seconds to a minute for a
   24-hour recording.
 
-## Deployment (summary)
+## Hosting (optional, currently not running)
 
-| What | Where | Config |
-|---|---|---|
-| Backend | Railway, Docker image from `backend/Dockerfile`, build context = repo root (`railway.json`) | env vars `MORA_*`, `PORT` set by Railway |
-| Frontend | Cloudflare Pages project `sleep-cz3`, builds `frontend/` with `npm run build` | env var `VITE_API_URL` |
-| Trigger | `git push` to branch `claude/refactor` (the production branch) | |
-
-Details and the exact dashboard settings: `docs/guides/DEPLOY.md`.
+The app was hosted from 2025 to November 2026 (backend on Railway as a Docker
+image, frontend on Cloudflare Pages, both rebuilt on `git push`). That was shut
+down to save the monthly cost; everyone now runs it locally. The Dockerfiles,
+`railway.json`, and `docker-compose.yml` are kept so it can be re-hosted.
+`docs/guides/DEPLOY.md` has the settings.
 
 ## Security model
 
