@@ -1,529 +1,162 @@
-# Mora Sleep Scoring - System Architecture
+# Architecture
 
-This document explains how the web-based Mora sleep scoring system works, including all services, components, and the flow of data.
+How the pieces fit together, what talks to what, and where the boundaries are.
+No prior web-development knowledge assumed.
 
----
+## One-paragraph version
 
-## System Overview Diagram
+A **recording** is a stereo WAV file: channel 1 is EEG, channel 2 is EMG, usually
+1000 samples per second for about 24 hours. The **feature package**
+(`sleep_features/`) cuts it into 10-second epochs and computes a handful of numbers
+per epoch (EEG amplitude, EMG amplitude, delta and theta power, and so on). The
+**model** (an XGBoost classifier in a `.pkl` file) turns each epoch's numbers into
+Wake / Non REM / REM. The **backend** (`backend/`, Python, FastAPI) is a small web
+server that wraps those two steps behind an HTTP endpoint. The **frontend**
+(`frontend/`, React) is the page you open in a browser: it uploads the WAV to the
+backend, draws the result, lets you edit scores, and saves a CSV. The **CLI**
+(`cli/`) does the same scoring without the browser.
 
-```
-                                    MORA SLEEP SCORING SYSTEM
- =====================================================================================================
-
-                                         USER INTERFACES
- ┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
- │                                                                                                     │
- │   ┌─────────────────────────────┐      ┌─────────────────────────────┐      ┌─────────────────────┐ │
- │   │     WEB BROWSER             │      │     COMMAND LINE            │      │    PYTHON SCRIPT    │ │
- │   │   (Non-technical users)     │      │   (Power users)             │      │   (Developers)      │ │
- │   │                             │      │                             │      │                     │ │
- │   │  https://sleep-cz3.pages.dev│      │  $ mora score file.wav      │      │  requests.post(...) │ │
- │   └──────────────┬──────────────┘      └──────────────┬──────────────┘      └──────────┬──────────┘ │
- │                  │                                    │                                │            │
- └──────────────────┼────────────────────────────────────┼────────────────────────────────┼────────────┘
-                    │                                    │                                │
-                    │ HTTPS                              │ HTTPS                          │ HTTPS
-                    │                                    │                                │
-                    ▼                                    ▼                                ▼
- ┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
- │                                    CLOUD INFRASTRUCTURE                                             │
- │                                                                                                     │
- │   ┌───────────────────────────────────────┐      ┌─────────────────────────────────────────────────┐│
- │   │          CLOUDFLARE PAGES             │      │              RAILWAY                            ││
- │   │         (Static Hosting)              │      │        (Container Hosting)                      ││
- │   │                                       │      │                                                 ││
- │   │  ┌─────────────────────────────────┐  │      │  ┌───────────────────────────────────────────┐  ││
- │   │  │     REACT FRONTEND              │  │      │  │         FASTAPI BACKEND                  │  ││
- │   │  │                                 │  │      │  │                                           │  ││
- │   │  │  • index.html                   │  │      │  │  POST /api/v1/score                       │  ││
- │   │  │  • app.js (compiled TypeScript) │──┼──────┼──│    → Accepts WAV file                     │  ││
- │   │  │  • styles.css                   │  │  API │  │    → Returns sleep scores + signals       │  ││
- │   │  │                                 │  │ calls│  │                                           │  ││
- │   │  │  Components:                    │  │      │  │  GET /api/v1/model/info                   │  ││
- │   │  │  • FileUpload                   │  │      │  │    → Model version, features              │  ││
- │   │  │  • EEGPlot / EMGPlot            │  │      │  │                                           │  ││
- │   │  │  • PowerSpectrum                │  │      │  │  GET /api/v1/health                       │  ││
- │   │  │  • RelativePower                │  │      │  │    → API status check                     │  ││
- │   │  │  • Hypnogram                    │  │      │  │                                           │  ││
- │   │  │  • ScoringResults               │  │      │  └───────────────────────────────────────────┘  ││
- │   │  │  • EpochEditor                  │  │      │                                                 ││
- │   │  │                                 │  │      │  ┌───────────────────────────────────────────┐  ││
- │   │  └─────────────────────────────────┘  │      │  │         XGBOOST MODEL                    │  ││
- │   │                                       │      │  │                                           │  ││
- │   │  Built with:                          │      │  │  • Version: 1.2.4                         │  ││
- │   │  • React 19 + TypeScript              │      │  │  • Classes: Wake, Non REM, REM            │  ││
- │   │  • Vite (build tool)                  │      │  │  • Features: 9 input columns              │  ││
- │   │  • Plotly.js (charts)                 │      │  │  • Loaded at startup                      │  ││
- │   │  • Tailwind CSS                       │      │  └───────────────────────────────────────────┘  ││
- │   │  • Zustand (state)                    │      │                                                 ││
- │   └───────────────────────────────────────┘      └─────────────────────────────────────────────────┘│
- └─────────────────────────────────────────────────────────────────────────────────────────────────────┘
-
- =====================================================================================================
-```
-
----
-
-## The Big Picture (Simplified)
+## Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              USER'S BROWSER                                 │
-│                                                                             │
-│   React App (JavaScript)                                                    │
-│   - Renders UI (upload button, hypnogram, EEG/EMG plots, etc.)             │
-│   - Runs entirely in the browser                                            │
-│   - Makes HTTP requests to backend                                          │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    │ HTTP Requests
-                                    │ (upload WAV, get scores)
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              RAILWAY (Backend)                              │
-│                                                                             │
-│   FastAPI + Python                                                          │
-│   - Receives WAV files                                                      │
-│   - Extracts features (power spectra, signal stats)                         │
-│   - Runs XGBoost model                                                      │
-│   - Returns JSON scores + signal data for visualization                     │
-└─────────────────────────────────────────────────────────────────────────────┘
+                 browser (frontend/)                    python server (backend/)
+  ┌─────────────────────────────────────┐   HTTP    ┌─────────────────────────────────┐
+  │  Upload WAV  → progress bar         │ ───────▶  │ POST /api/v1/score              │
+  │  Hypnogram, EEG/EMG plots           │ ◀───────  │   load WAV                      │
+  │  Keyboard re-scoring (W/E/R/T)      │  JSON     │   sleep_features.generate_...   │  ← sleep_features/
+  │  Export CSV / breakdown             │           │   model.predict (XGBoost .pkl)  │  ← backend/models/*.pkl
+  └─────────────────────────────────────┘           │   signal QC → "Unscored"        │
+                                                    │   reliability warnings          │
+                 terminal (cli/)                     │ GET /api/v1/health, /model/info │
+  ┌─────────────────────────────────────┐           └─────────────────────────────────┘
+  │ mora score file.wav [--api]         │ ── same code path (ScoringService) ──┘
+  └─────────────────────────────────────┘
+
+                 training (model/, offline, your laptop)
+  training_data/*.wav + labels ──▶ python -m sleep_features build ──▶ feature_store/*.csv
+  feature_store/*.csv ──▶ python -m model.train ──▶ model_artifacts/<id>/<id>.pkl (+ _ood.pkl)
+  copy the .pkl files into backend/models/ ──▶ the backend serves the new model
 ```
 
----
+## The components
 
-## Components Explained
+### `sleep_features/` : feature engineering (single source of truth)
 
-### Frontend (What the user sees)
+Pure Python package, no web code. Used by the backend at scoring time **and** by the
+feature-store builder at training time, so the numbers the model sees in training
+are computed by exactly the same code as the numbers it sees in production.
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Language** | TypeScript | JavaScript with type safety |
-| **Library** | React | Build UI components, handle state |
-| **Build Tool** | Vite | Compile TypeScript → JavaScript |
-| **Charts** | Plotly.js | EEG/EMG time series, spectrogram, hypnogram |
-| **State** | Zustand | Global state management |
-| **Styling** | Tailwind CSS | Utility-first CSS |
-| **Hosting** | Cloudflare Pages | Serve static files globally |
+- `pipeline.generate_feature_table(df, normalization, samplerate, feature_set)` is the
+  one entry point. Input: a DataFrame with `eeg` and `emg` columns. Output: one row
+  per 10-second epoch.
+- `transforms.py`, `spectral.py`, `temporal.py`: the math (FFT band power, amplitude
+  stats, Hjorth parameters, rolling context).
+- `normalize.py`: per-recording normalization. `robust_mad` (default: median/MAD
+  per recording) replaces the old `baseline_epoch` method, which needed a user to
+  pick a "known Wake epoch".
+- `qc.py`: per-epoch signal-quality checks (flat line, clipping, non-finite, gross
+  amplitude). Epochs that fail are reported as **Unscored**.
+- `ood.py` + `reliability.py`: recording-level warnings. See `docs/MODEL.md`,
+  section "Reliability warnings".
+- `discovery.py`, `scores.py`, `io.py`, `build.py`: find recordings and label files
+  on disk, parse labels, build the feature store CSV + manifest.
+- `config.py`: feature column lists (v1, v2), bands, epoch length, and
+  `FEATURE_CODE_VERSION`, the compatibility contract between a saved model and the
+  feature code (see `docs/guides/ADD_A_FEATURE.md`).
 
-The frontend is just files (HTML, JavaScript, CSS). Cloudflare Pages hosts these files and delivers them to users. Once downloaded, the code runs **in the user's browser** - Cloudflare does nothing else.
+### `model/` : training and evaluation (offline)
 
-### Backend (Where the work happens)
+- `train.py`: reads `model_config.json`, loads a feature-store CSV, splits by
+  recording and time, tunes XGBoost with time-series cross-validation, reports
+  holdout metrics, refits on everything, fits the OOD detector, saves to
+  `model_artifacts/<model_id>/`.
+- `evaluate.py`: load a saved model + a labeled feature CSV, print kappa, per-class
+  precision/recall, confusion matrix, transition accuracy.
+- `diagnostics.py`, `cross_validation.py`: the metrics and splitters both of those use.
+- `experiments/`: research scripts (leave-one-animal-out comparisons, per-animal
+  diagnosis). Not part of the product.
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Language** | Python | Feature extraction, ML inference |
-| **Framework** | FastAPI | Turn Python functions into HTTP endpoints |
-| **Model** | XGBoost | Classify sleep stages |
-| **Packaging** | Docker | Bundle code + dependencies |
-| **Hosting** | Railway | Run the Docker container 24/7 |
+### `backend/` : the API
 
-The backend is a Python server. Railway runs it continuously, waiting for requests. When a request arrives, FastAPI routes it to the appropriate function.
+FastAPI app. Starts, loads the model (`app/core/model_loader.py`), and exposes:
 
----
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/v1/score` | Upload a WAV, get scores, summary, reliability warnings, and (optionally) downsampled signals for plotting |
+| POST | `/api/v1/features` | Feature table only (debugging) |
+| GET | `/api/v1/model/info` | Model name, version, feature columns, classes |
+| GET | `/api/v1/health` | Is it up, is the model loaded, is an API key required |
 
-## Data Flow: Scoring a Recording
+`app/services/scoring_service.py` is the pipeline: load WAV, features (strategy chosen
+by the model's metadata), predict, rule-based filter (kept for the UI toggle; the
+default view is unfiltered), QC → Unscored, reliability report.
 
-```
- USER                    FRONTEND                   BACKEND                    MODEL
-  │                         │                          │                         │
-  │  1. Select WAV file     │                          │                         │
-  ├────────────────────────►│                          │                         │
-  │                         │                          │                         │
-  │                         │  2. POST /api/v1/score   │                         │
-  │                         │     (multipart/form-data)│                         │
-  │                         ├─────────────────────────►│                         │
-  │                         │                          │                         │
-  │                         │                          │  3. Read WAV file       │
-  │                         │                          ├────────────────────────►│
-  │                         │                          │                         │
-  │                         │                          │  4. Extract features    │
-  │                         │                          │     per epoch           │
-  │                         │                          │◄────────────────────────┤
-  │                         │                          │                         │
-  │                         │                          │  5. model.predict()     │
-  │                         │                          ├────────────────────────►│
-  │                         │                          │                         │
-  │                         │                          │  6. Predictions         │
-  │                         │                          │◄────────────────────────┤
-  │                         │                          │                         │
-  │                         │                          │  7. Apply rule filter   │
-  │                         │                          │     (clean up errors)   │
-  │                         │                          │                         │
-  │                         │  8. JSON Response        │                         │
-  │                         │     {epochs, summary,    │                         │
-  │                         │      eeg_data, emg_data, │                         │
-  │                         │      power_spectrum}     │                         │
-  │                         │◄─────────────────────────┤                         │
-  │                         │                          │                         │
-  │  9. Display plots       │                          │                         │
-  │     & results           │                          │                         │
-  │◄────────────────────────┤                          │                         │
-  │                         │                          │                         │
-```
+Configuration is by environment variables prefixed `MORA_` (`app/core/config.py`).
+The important ones: `MORA_MODEL_PATH` (default: the `.pkl` in `backend/models/`),
+`MORA_API_KEYS` (empty = no auth), `MORA_CORS_ORIGINS`.
 
----
+The model `.pkl` is a tuple `(xgboost_model, metadata_dict, label_encoder)`. The
+metadata tells the backend which feature columns, which normalization strategy, which
+feature-code version, and where the OOD detector file is. **That is why you never
+need to edit backend code to serve a new model**: drop the new `.pkl` (and its
+`_ood.pkl`) in `backend/models/`, remove the old one, restart.
 
-## Build Time vs Runtime
+### `frontend/` : the GUI
 
-### Build Time (happens once, when you deploy)
+React + TypeScript, built with Vite, styled with Tailwind, charts with Plotly.
+One page. State lives in a single store (`src/store/useAppStore.ts`). The page
+talks to the backend through `src/api/sleepApi.ts` only. Full description in
+`docs/GUI_DESIGN.md`; how to change it in `docs/guides/EDIT_THE_UI.md`.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              BUILD TIME                                     │
-│                         (when you push to GitHub)                           │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   FRONTEND BUILD (Cloudflare Pages):                                        │
-│                                                                             │
-│   TypeScript (.tsx files)                                                   │
-│         │                                                                   │
-│         ▼  npm run build                                                    │
-│   JavaScript + HTML + CSS                                                   │
-│         │                                                                   │
-│         ▼  Upload to Cloudflare                                             │
-│   Static files hosted at sleep-cz3.pages.dev                                │
-│                                                                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   BACKEND BUILD (Railway):                                                  │
-│                                                                             │
-│   Dockerfile                                                                │
-│         │                                                                   │
-│         ▼  docker build                                                     │
-│   Docker Image (Python + FastAPI + Model)                                   │
-│         │                                                                   │
-│         ▼  Start container                                                  │
-│   Server running at sleep-production.up.railway.app                         │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+In development, the Vite dev server (port 3000) forwards `/api` requests to the
+backend on port 8000, so no configuration is needed. In production the build is
+given `VITE_API_URL` pointing at the Railway backend.
 
-### Runtime (happens every time a user visits)
+### `cli/` : command line
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                               RUNTIME                                       │
-│                          (user visits the app)                              │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  1. USER OPENS https://sleep-cz3.pages.dev                                  │
-│         │                                                                   │
-│         ▼                                                                   │
-│  2. CLOUDFLARE serves JavaScript/HTML/CSS files                             │
-│         │                                                                   │
-│         ▼                                                                   │
-│  3. BROWSER executes JavaScript (React app starts)                          │
-│         │                                                                   │
-│         │  (Cloudflare's job is done - it just served files)                │
-│         ▼                                                                   │
-│  4. USER uploads a WAV file                                                 │
-│         │                                                                   │
-│         ▼                                                                   │
-│  5. BROWSER sends HTTP POST to Railway backend                              │
-│         │   POST https://sleep-production.up.railway.app/api/v1/score       │
-│         │   Body: WAV file + baseline epoch                                 │
-│         ▼                                                                   │
-│  6. RAILWAY receives request                                                │
-│         │   FastAPI routes to score_file() function                         │
-│         │   Python extracts features                                        │
-│         │   XGBoost predicts sleep stages                                   │
-│         ▼                                                                   │
-│  7. RAILWAY returns JSON response                                           │
-│         │   {"epochs": [...], "eeg_data": [...], "summary": {...}}          │
-│         ▼                                                                   │
-│  8. BROWSER receives response                                               │
-│         │   React updates UI                                                │
-│         │   Plotly renders EEG/EMG/Hypnogram                                │
-│         ▼                                                                   │
-│  9. USER sees scored data with full visualizations                          │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+`mora score file.wav` runs the exact same `ScoringService` as the backend, in-process.
+`mora score file.wav --api` uploads to the deployed backend instead. `mora batch` does
+a folder. See `docs/guides/CLI.md`.
 
----
+## Key concepts for newcomers
 
-## Frontend Component Architecture
+**Why a separate frontend and backend?** The model needs Python and 100+ MB of
+libraries. A browser can't run that. So the Python lives on a server, and the browser
+just sends a file and receives JSON. The user needs nothing installed.
 
-```
- App.tsx
- │
- ├── Header
- │   └── Title, API status indicator
- │
- ├── FileUpload.tsx
- │   ├── Drag-drop zone for WAV files
- │   ├── Baseline epoch selector
- │   └── Upload progress bar
- │
- ├── EpochViewer.tsx
- │   ├── Navigation Controls
- │   │   ├── Previous/Next epoch buttons
- │   │   ├── Find epoch input
- │   │   ├── Next REM button
- │   │   └── Window size selector (1/3/5/7 epochs)
- │   │
- │   ├── EEGPlot.tsx
- │   │   └── Time series with epoch shading by sleep state
- │   │
- │   ├── PowerSpectrum.tsx
- │   │   └── FFT frequency plot (0-50 Hz)
- │   │
- │   ├── EMGPlot.tsx
- │   │   └── Time series with epoch shading
- │   │
- │   └── RelativePower.tsx
- │       └── Delta/Theta bar chart
- │
- ├── ScoringPanel.tsx
- │   ├── Score buttons (Wake / NREM / REM / Unscored)
- │   ├── Keyboard shortcuts: W / E / R / T
- │   └── Current epoch info display
- │
- ├── Hypnogram.tsx
- │   ├── Full recording timeline
- │   ├── Clickable navigation to any epoch
- │   └── Color-coded by sleep state
- │
- ├── ScoringResults.tsx
- │   ├── Summary statistics (counts, percentages)
- │   └── Pie/bar chart visualization
- │
- └── ExportPanel.tsx
-     ├── Export Scores (CSV)
-     ├── Export Breakdown (summary CSV)
-     └── Import Scores (load existing scores)
-```
+**What is an API?** A set of URLs the server answers. `POST /api/v1/score` means
+"send me a file at this address and I'll reply with scores". Open
+`http://localhost:8000/docs` while the backend runs to see and try every endpoint.
 
----
+**What is Docker?** A recipe (`backend/Dockerfile`) that builds a self-contained
+Linux image with Python, the libraries, the code, and the model. Railway builds and
+runs that image. You don't need Docker locally; the guides run things directly.
 
-## Feature Engineering Pipeline
+**Where does the model's "truth" come from?** `training_data/` (not in git): WAVs
+plus hand-scored label files. `docs/DATA_FORMATS.md` describes the layout.
 
-```
- RAW WAV FILE                    FEATURE EXTRACTION                    MODEL INPUT
- ─────────────────────────────────────────────────────────────────────────────────
+## Build time vs run time
 
- ┌──────────────────┐
- │ Stereo WAV       │
- │ • Channel 1: EEG │
- │ • Channel 2: EMG │
- │ • 1000 Hz        │
- └────────┬─────────┘
-          │
-          ▼
- ┌──────────────────┐     ┌────────────────────────────────────────────────────┐
- │ Split into       │     │  For each 10-second epoch:                        │
- │ 10-second epochs │────►│                                                    │
- │ (10,000 samples) │     │  EEG Features:           EMG Features:            │
- └──────────────────┘     │  • quantile_80           • std                    │
-                          │  • peak-to-peak          • events (muscle bursts) │
-                          │  • sum of squares        • peak-to-peak           │
-                          │                                                    │
-                          │  Power Features (FFT):                            │
-                          │  • delta_rel (0.5-4 Hz relative power)            │
-                          │  • theta_rel (5.5-8.5 Hz relative power)          │
-                          │  • theta_over_delta ratio                         │
-                          └────────────────────────────────────────────────────┘
-                                              │
-                                              ▼
-                          ┌────────────────────────────────────────────────────┐
-                          │  Normalize to baseline epoch (user-selected Wake) │
-                          │  Features = (raw - baseline_mean) / baseline_std   │
-                          └────────────────────────────────────────────────────┘
-                                              │
-                                              ▼
-                          ┌────────────────────────────────────────────────────┐
-                          │  XGBoost Classifier                                │
-                          │  Input: 9 features per epoch                       │
-                          │  Output: Wake / Non REM / REM                      │
-                          └────────────────────────────────────────────────────┘
-                                              │
-                                              ▼
-                          ┌────────────────────────────────────────────────────┐
-                          │  Rule-Based Filter (post-processing)               │
-                          │  • Wake-Wake-REM → Wake-Wake-Wake                  │
-                          │  • Isolated single epochs → match neighbors        │
-                          │  • Isolated double epochs → match neighbors        │
-                          └────────────────────────────────────────────────────┘
-```
+- **Training** happens on a laptop, by hand, occasionally. Output: a `.pkl`.
+- **Deploying** happens when you push to GitHub: Railway rebuilds the backend
+  image (with whatever `.pkl` is in `backend/models/`), Cloudflare Pages rebuilds
+  the frontend. Minutes.
+- **Scoring** happens every time someone uploads a file. Seconds to a minute for a
+  24-hour recording.
 
----
+## Deployment (summary)
 
-## Key Concepts
+| What | Where | Config |
+|---|---|---|
+| Backend | Railway, Docker image from `backend/Dockerfile`, build context = repo root (`railway.json`) | env vars `MORA_*`, `PORT` set by Railway |
+| Frontend | Cloudflare Pages project `sleep-cz3`, builds `frontend/` with `npm run build` | env var `VITE_API_URL` |
+| Trigger | `git push` to branch `claude/refactor` (the production branch) | |
 
-### Why separate Frontend and Backend?
+Details and the exact dashboard settings: `docs/guides/DEPLOY.md`.
 
-| Aspect | Frontend Only | Backend Required |
-|--------|---------------|------------------|
-| Display UI | Yes | |
-| Handle clicks | Yes | |
-| Run Python | No | Yes |
-| Load ML models | No | Yes |
-| Process large files | No | Yes |
+## Security model
 
-Browsers can't run Python or load scikit-learn models. We need a server for that.
-
-### What is an API?
-
-**API = Application Programming Interface**
-
-It's a contract: "Send me data in this format, I'll return results in that format."
-
-```
-Request:
-  POST /api/v1/score
-  Body: WAV file + baseline_epoch
-
-Response:
-  {
-    "epochs": [{"epoch": 0, "score": "Wake"}, ...],
-    "summary": {"Wake": {"count": 120, "percentage": 45.2}, ...},
-    "eeg_data": [[...], [...], ...],   // per-epoch signal data
-    "emg_data": [[...], [...], ...],
-    "power_data": [[...], [...], ...]
-  }
-```
-
-The frontend doesn't know or care how scoring works. It just sends a file and receives JSON.
-
-### What is Docker?
-
-Docker packages your code + all dependencies into a container that runs identically everywhere.
-
-```
-Without Docker:
-  "Works on my machine" → Fails on server (wrong Python version, missing scipy, etc.)
-
-With Docker:
-  Dockerfile defines exact environment → Same result everywhere
-```
-
----
-
-## Security Model
-
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                        SECURITY LAYERS                             │
-├────────────────────────────────────────────────────────────────────┤
-│                                                                    │
-│  1. TRANSPORT SECURITY                                             │
-│     • All traffic over HTTPS (TLS 1.3)                            │
-│     • Certificates managed by Cloudflare/Railway                   │
-│                                                                    │
-│  2. API AUTHENTICATION (Optional)                                  │
-│     • X-API-Key header                                            │
-│     • Keys hashed with SHA-256                                    │
-│     • Configure via MORA_API_KEYS env var                         │
-│                                                                    │
-│  3. RATE LIMITING                                                  │
-│     • Per-client IP address                                       │
-│     • Configurable requests/minute                                │
-│     • 429 response when exceeded                                  │
-│                                                                    │
-│  4. CORS POLICY                                                    │
-│     • Restrict to specific frontend domains                       │
-│     • Configure via MORA_CORS_ORIGINS                             │
-│                                                                    │
-│  5. INPUT VALIDATION                                               │
-│     • File type checking (.wav only)                              │
-│     • File size limits (500MB max)                                │
-│     • Pydantic schema validation                                  │
-│                                                                    │
-│  6. DATA HANDLING                                                  │
-│     • No server-side storage of recordings                        │
-│     • Process in memory, return results, discard                  │
-│     • No user accounts or PII stored                              │
-│                                                                    │
-└────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Deployment Architecture
-
-```
- GIT REPOSITORY (GitHub)
- ────────────────────────────────────────────────────────────────────
-         │
-         │ push to main/claude/refactor
-         │
-         ├─────────────────────────────────┬──────────────────────────
-         │                                 │
-         ▼                                 ▼
- ┌─────────────────────────┐      ┌─────────────────────────┐
- │   CLOUDFLARE PAGES      │      │       RAILWAY           │
- │                         │      │                         │
- │ Watches: /frontend      │      │ Watches: /backend       │
- │                         │      │                         │
- │ Build command:          │      │ Build: Dockerfile       │
- │   npm run build         │      │                         │
- │                         │      │ Start: start.sh         │
- │ Output: /frontend/dist  │      │   uvicorn app.main:app  │
- │                         │      │   --host 0.0.0.0        │
- │ URL:                    │      │   --port $PORT          │
- │ sleep-cz3.pages.dev     │      │                         │
- │                         │      │ URL:                    │
- │ Environment:            │      │ sleep-production.       │
- │ VITE_API_URL=https://   │      │   up.railway.app        │
- │   sleep-production...   │      │                         │
- └─────────────────────────┘      │ Environment:            │
-                                  │ MORA_API_KEYS=...       │
-                                  │ MORA_RATE_LIMIT_...     │
-                                  └─────────────────────────┘
-```
-
----
-
-## URLs
-
-| Service | URL | Purpose |
-|---------|-----|---------|
-| Frontend | https://sleep-cz3.pages.dev | Web interface |
-| Backend | https://sleep-production.up.railway.app | API server |
-| API Docs | https://sleep-production.up.railway.app/docs | Swagger UI |
-| Health Check | https://sleep-production.up.railway.app/api/v1/health | Status |
-
----
-
-## Cost
-
-| Service | Role | Cost |
-|---------|------|------|
-| Cloudflare Pages | Serve frontend files | Free |
-| Railway | Run Python backend | ~$5-15/month |
-| **Total** | | **~$5-15/month** |
-
----
-
-## Local Development
-
-```bash
-# Terminal 1 - Backend
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-
-# Terminal 2 - Frontend
-cd frontend
-npm install
-npm run dev
-# Opens at http://localhost:3000, proxies API to :8000
-```
-
----
-
-## Flow Summary
-
-1. **You write** TypeScript (frontend) + Python (backend)
-2. **You push** to GitHub
-3. **Cloudflare builds** TypeScript → JavaScript, hosts the files
-4. **Railway builds** Docker image, runs the container
-5. **User visits** the Cloudflare URL
-6. **Browser downloads** JavaScript, runs React app
-7. **User uploads** WAV file
-8. **Browser sends** request to Railway
-9. **Railway processes** file, returns scores + signal data
-10. **Browser displays** full visualization (EEG, EMG, spectrum, hypnogram)
-
-The frontend and backend are completely separate services that communicate over HTTP.
+Optional. With `MORA_API_KEYS` empty (current state), anyone with the URL can score
+files. Set it to enable the `X-API-Key` header check; the GUI has a gear icon to
+enter the key, the CLI takes `--api-key`. Rate limiting and request logging are
+also available. `docs/SECURITY_GUIDE.md` explains when you'd want this.

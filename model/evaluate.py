@@ -56,6 +56,11 @@ def evaluate(
         print("Error: data must have a 'score' column with ground truth labels")
         sys.exit(1)
 
+    n_unscored = int((df["score"] == "Unscored").sum())
+    if n_unscored:
+        print(f"Dropping {n_unscored} Unscored epochs")
+        df = df[df["score"] != "Unscored"].reset_index(drop=True)
+
     X = df[feature_cols]
     y_true = df["score"].values
 

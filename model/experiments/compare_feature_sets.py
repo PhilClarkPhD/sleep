@@ -11,7 +11,7 @@ Hyperparameters are held FIXED and identical across feature sets so the only
 thing that varies between runs is the feature columns (a clean A/B).
 
 Usage:
-    python -m model.compare_feature_sets --v1 <fs_v1.csv> --v2 <fs_v2.csv>
+    python -m model.experiments.compare_feature_sets --v1 <fs_v1.csv> --v2 <fs_v2.csv>
 """
 
 import argparse

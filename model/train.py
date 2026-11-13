@@ -42,9 +42,17 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 log = logging.getLogger(__name__)
 
 
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
 def load_config(config_path: str) -> dict:
+    """Load the training config. Relative paths in "paths" resolve against the repo root."""
     with open(config_path) as f:
-        return json.load(f)
+        config = json.load(f)
+    for key, val in config.get("paths", {}).items():
+        if key != "feature_store_table" and not os.path.isabs(val):
+            config["paths"][key] = os.path.join(REPO_ROOT, val)
+    return config
 
 
 def split_train_test(

@@ -5,6 +5,25 @@
 - Make generating the model cards a config option
 - Validations: eg validate monotonic increasing epoch if using for time series index
 
+## 2026-11-13 (hand-off cleanup)
+### CHANGED
+- Documentation rewritten for hand-off: `README.md` task index, `docs/ARCHITECTURE.md`,
+  `docs/MODEL.md`, `docs/GUI_DESIGN.md`, `docs/DATA_FORMATS.md`, and task guides in
+  `docs/guides/` (SETUP, RUN_THE_APP, RETRAIN_MODEL, EVALUATE_MODEL, ADD_A_FEATURE,
+  EDIT_THE_UI, CLI, TESTING, DEPLOY). `CLAUDE.md` is now a general AI-assistant brief.
+- Research scripts moved to `model/experiments/` (with README); `make_model_card.py`
+  (broken against current metadata) archived there as `legacy_make_model_card.py`;
+  `utils/` removed. `REFACTOR_PLAN.md` / `REFACTOR_REVIEW.md` moved to `docs/archive/`.
+- Backend serves whichever `*.pkl` is in `backend/models/` (newest if several) instead
+  of a hardcoded `XGBoost_1.2.4.pkl`; `/model/info` reports the model's own `feature_cols`.
+- CLI local mode now reuses the backend `ScoringService` (same features, normalization,
+  QC, reliability as the API). Added `--api-key` / `MORA_API_KEY`; `--start-epoch`
+  default aligned with the API (2); unfiltered scores by default like the GUI.
+- `model/model_config.json` is tracked in git with repo-relative paths (resolved by
+  `train.py`), pointing at the 2026-10-25 v1 store. `evaluate.py` drops `Unscored` rows.
+- Root `requirements.txt` is now the full dev environment (was the removed PyQt GUI's).
+- Frontend: removed unused `ExportButton.tsx` and template leftovers; real README.
+
 ## 2026-11-13
 ### CHANGED
 - **OOD is now a recording-level warning, not per-epoch blanking.** The Mahalanobis
@@ -40,7 +59,7 @@
 
 - `labels.json` value `null` now EXCLUDES a recording from discovery. ZZ01 (weak-theta recording)
   excluded via `training_data/Filtered Scores 2/labels.json` (2026-10-26). Cohort = 9 animals.
-- `model/diagnose_animals.py`, `model/emg_scaling_experiment.py`, `model/local_contrast_experiment.py`
+- `model/experiments/diagnose_animals.py`, `model/experiments/emg_scaling_experiment.py`, `model/experiments/local_contrast_experiment.py`
   (per-animal REM diagnosis; EMG floor-ceiling scaling = adopted for v2.1; local contrast = null result).
 - `model_cards/SleepScoring_v2.1_candidate.html` — stakeholder card, 9-animal LOO.
 

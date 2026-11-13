@@ -16,7 +16,7 @@ Evaluated as pooled leave-one-animal-out, v2 + REM extras, floor-ceiling EMG
 scaling, unweighted, no filter; recall is reported by REM bout length.
 
 Usage:
-    python -m model.local_contrast_experiment --v2 <fs_v2.csv>
+    python -m model.experiments.local_contrast_experiment --v2 <fs_v2.csv>
 """
 
 import argparse
@@ -26,10 +26,10 @@ import pandas as pd
 
 from sleep_features.config import FEATURE_SETS, UNSCORED_LABEL
 from model.diagnostics import evaluate_model
-from model.diagnose_animals import _bouts, loo_predictions
-from model.emg_scaling_experiment import apply_scaling
-from model.rem_phase23_experiment import augment_features
-from model.rem_recall_experiment import GROUP_COL, REM, TARGET_COL, TIME_COL
+from model.experiments.diagnose_animals import _bouts, loo_predictions
+from model.experiments.emg_scaling_experiment import apply_scaling
+from model.experiments.rem_phase23_experiment import augment_features
+from model.experiments.rem_recall_experiment import GROUP_COL, REM, TARGET_COL, TIME_COL
 
 EPS = 1e-9
 LC_SOURCE = ["theta_over_delta", "theta_dominance", "theta_rel"]

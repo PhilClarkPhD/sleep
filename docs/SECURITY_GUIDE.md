@@ -173,7 +173,7 @@ If you publish a paper with this tool or make it widely available, you need all 
 # Run this in terminal to generate a random key
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 
-# Output example: Yx7kM9pQrS2tUvWxYz3aBcDeFgHiJkLmNoPq
+# Output example (made up, generate your own): Yx7kM9pQrS2tUvWxYz3aBcDeFgHiJkLmNoPq
 ```
 
 ### Step 2: Configure Railway

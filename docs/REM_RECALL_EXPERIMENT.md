@@ -40,13 +40,13 @@ Class balance ≈ Wake 54% / NREM 38% / **REM 8%** (the hard minority).
    recordings then discovered and parsed.
 2. **Feature stores.** Built committed, versioned v1 (12 feat) and v2 (28 feat)
    stores with `robust_mad` normalization via `python -m sleep_features build`.
-3. **v1 vs v2 baseline (LOO).** `model/compare_feature_sets.py`.
+3. **v1 vs v2 baseline (LOO).** `model/experiments/compare_feature_sets.py`.
 4. **Phase 0 — headroom.** REM one-vs-rest PR curve from LOO probabilities.
 5. **Phase 1 — cost-sensitive operating point** (nested LOO): REM sample-weight +
-   REM probability-multiplier. `model/rem_recall_experiment.py`.
+   REM probability-multiplier. `model/experiments/rem_recall_experiment.py`.
 6. **Phase 2 — REM-targeted features** (LOO ablation).
 7. **Phase 3 — HMM/Viterbi sequence decoding** (LOO). Phases 2–3 in
-   `model/rem_phase23_experiment.py`.
+   `model/experiments/rem_phase23_experiment.py`.
 
 ---
 
@@ -207,7 +207,7 @@ model went κ 0.71 → 0.80 from data alone.
 Per-animal REM recall, recommended pipeline (July → now): ZZ01 55→71, ZZ05 56→61, ZZ16 91→88,
 ZZ18 86→88, ZZ19 84→79; new: ZZ25 97, ZZ27 66, ZZ29 83, ZZ30 78, ZZ32 85.
 
-## Per-animal diagnosis (`python -m model.diagnose_animals`)
+## Per-animal diagnosis (`python -m model.experiments.diagnose_animals`)
 
 Unweighted no-filter LOO predictions; raw metrics from the WAVs.
 
@@ -256,7 +256,7 @@ etc. are those) before the next training run.
    `rem_weight` ≈ 2), and drop the baseline-epoch input from UI/API.
 4. HMM as an optional "smooth" mode (recall 0.85 at precision 0.80) once labels are consistent.
 
-## EMG scaling experiment (2026-10-25, `model/emg_scaling_experiment.py`)
+## EMG scaling experiment (2026-10-25, `model/experiments/emg_scaling_experiment.py`)
 
 Question: ZZ05's REM-epoch EMG sits +3.5 SD from the cohort after per-recording robust_mad
 (affine) normalization because its EMG dynamic range is compressed (low gain / noise floor).
@@ -309,7 +309,7 @@ LOO over the 5 new animals, varying the training pool (floor-ceiling EMG):
 singleton REM 1.40 · 2–3 ep 1.95 · 4–9 ep 2.46 · 10+ ep 2.73 · NREM 0.70 · Wake 0.71; EMG is fully
 atonic in all REM categories. Singletons sit midway between NREM and sustained REM.
 
-**Local-contrast features (`model/local_contrast_experiment.py`) — null result.**
+**Local-contrast features (`model/experiments/local_contrast_experiment.py`) — null result.**
 `log(col / trailing_median(col, prev W epochs))` for theta/delta, theta dominance, theta_rel,
 W = 30 and 90 epochs, added to or replacing the centered roll5/roll9 means: pooled REM recall
 0.776–0.782 (baseline 0.780), singleton recall 0.14–0.16 (baseline 0.15), 2–3-epoch 0.25–0.30

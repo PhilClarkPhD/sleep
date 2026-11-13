@@ -179,59 +179,61 @@ for error, count in sorted(error_counts.items(), key=lambda x: -x[1])[:5]:
 
 ## Recommended Validation Workflow
 
-### 1. Initial Train/Test Split
+This is what `model/train.py` does; the function names below are the ones in that
+file, so you can call them from a notebook or script.
+
+### 1. Train/test split by time within each recording
 
 ```python
-from model.train_test_split import train_test_split
+from model.train import split_train_test
 
-train_df, test_df = train_test_split(
-    df_features,
-    train_size=0.8,
-    time_series_index="epoch",
-    group_col="ID_day"
+train_df, test_df = split_train_test(
+    df_features, train_size=0.75, group_col="ID_day", time_col="epoch"
 )
 ```
 
-This maintains temporal order within each recording.
+The first 75% of each recording's epochs go to train, the last 25% to test.
+Temporal order is kept and no recording is split randomly.
 
-### 2. Hyperparameter Search with Proper CV
+### 2. Hyperparameter search with grouped time-series CV
 
 ```python
-from model.train_model import find_best_params
+from model.train import tune_hyperparams
 from model.cross_validation import get_cv_splitter
 
 cv = get_cv_splitter("group_time_series", n_splits=5, gap=6)
-
-best_params, duration = find_best_params(
-    X_train, y_train, search_space,
-    cv_splitter=cv,
-    groups=train_df['ID_day']
+best_params, duration = tune_hyperparams(
+    X_train, y_train_encoded, search_space, cv, groups=train_df["ID_day"],
+    n_iter=50, random_state=42,
 )
 ```
 
-### 3. Train Final Model
+### 3. Train the final model on all labeled data
 
 ```python
-from model.train_model import train_model
+from model.train import train_final_model
 
-model, y_pred, time_to_fit, label_encoder = train_model(X, y, best_params)
+model, label_encoder, fit_time = train_final_model(X_all, y_all, best_params)
 ```
 
-### 4. Evaluate with Comprehensive Metrics
+### 4. Evaluate with the full metric set
 
 ```python
 from model.diagnostics import evaluate_model
 
-# Evaluate on held-out test set
-y_test_pred = label_encoder.inverse_transform(model.predict(X_test))
-metrics = evaluate_model(y_test, y_test_pred)
-print(metrics)
-
-# Save metrics to model metadata
-metadata['evaluation'] = metrics.to_dict()
+metrics = evaluate_model(y_test, y_pred, class_labels=["Non REM", "REM", "Wake"])
+print(metrics.summary())
 ```
 
----
+The metrics are stored in the model's metadata (`test_cohen_kappa`,
+`test_class_metrics`, ...) so every artifact carries its own report.
+
+### 5. Leave-one-animal-out for the honest estimate
+
+The holdout slice above shares animals with training. To estimate performance on
+a *new* animal, use `get_cv_splitter("leave_one_out")` grouped by `ID_day`, or run
+`python -m model.experiments.compare_feature_sets`, which does exactly that and
+prints per-animal results. The numbers in `docs/MODEL.md` are LOO.
 
 ## Common Pitfalls
 

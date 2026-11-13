@@ -1,10 +1,18 @@
+# LEGACY / BROKEN: expects metadata keys that model/train.py no longer writes
+# (train_features_importance, eval_metric, train_score, ...). Kept for reference only.
+# The v2.x model cards in model_cards/ were written by hand.
 import numpy as np
 import pandas as pd
 import joblib
 from evidently.report import Report
 from evidently.metrics import *
 from evidently import ColumnMapping
-from utils.load_config import load_config
+import json
+
+
+def load_config(config_path):
+    with open(config_path) as f:
+        return json.load(f)
 
 # Load the model config
 config_path = "/Users/phil/philclarkphd/sleep/model/model_config.json"

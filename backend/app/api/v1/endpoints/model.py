@@ -32,7 +32,7 @@ async def get_model_info(
     return ModelInfoResponse(
         model_name=model_manager.model_name,
         model_version=model_manager.version,
-        feature_columns=settings.FEATURE_COLS,
+        feature_columns=(model_manager.metadata or {}).get("feature_cols") or settings.FEATURE_COLS,
         classes=model_manager.classes,
         notes=model_manager.notes,
     )

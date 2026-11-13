@@ -10,7 +10,7 @@ Usage:
     mora score recording.wav -o scores.csv      # Export to CSV
 
 Examples:
-    # Score a file locally (requires model file)
+    # Score a file locally (requires backend deps + model file)
     mora score path/to/recording.wav
 
     # Score using the remote API
@@ -31,8 +31,12 @@ from typing import Optional
 # Entry-point bootstrap: ensure the repo root is importable so `sleep_features`
 # resolves regardless of how this script is launched.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+_BACKEND_DIR = _REPO_ROOT / "backend"
+for _p in (_REPO_ROOT, _BACKEND_DIR):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
+
+DEFAULT_API_URL = "https://sleep-production.up.railway.app"
 
 import click
 
@@ -51,16 +55,18 @@ def cli():
 @click.argument("file", type=click.Path(exists=True))
 @click.option("-o", "--output", type=click.Path(), help="Output CSV file path")
 @click.option("--api", is_flag=True, help="Use remote API instead of local model")
+@click.option("--api-url", default=DEFAULT_API_URL, help="API URL for remote scoring")
 @click.option(
-    "--api-url",
-    default="https://sleep-production.up.railway.app",
-    help="API URL for remote scoring",
+    "--api-key",
+    envvar="MORA_API_KEY",
+    default=None,
+    help="API key for the remote server (or set MORA_API_KEY). Only needed if the server requires one.",
 )
 @click.option(
     "--start-epoch",
-    default=9,
+    default=2,
     type=int,
-    help="Epoch to use for baseline normalization (default: 9)",
+    help="Baseline epoch for legacy (baseline-normalized) models; ignored by newer models. Same default as the API (2).",
 )
 @click.option("--json", "output_json", is_flag=True, help="Output as JSON instead of table")
 def score(
@@ -68,6 +74,7 @@ def score(
     output: Optional[str],
     api: bool,
     api_url: str,
+    api_key: Optional[str],
     start_epoch: int,
     output_json: bool,
 ):
@@ -85,7 +92,7 @@ def score(
     click.echo(f"Scoring: {file_path.name}")
 
     if api:
-        scores, summary = score_via_api(file_path, api_url, start_epoch)
+        scores, summary = score_via_api(file_path, api_url, start_epoch, api_key)
     else:
         scores, summary = score_locally(file_path, start_epoch)
 
@@ -106,16 +113,20 @@ def score(
 @click.argument("folder", type=click.Path(exists=True))
 @click.option("-o", "--output", type=click.Path(), required=True, help="Output folder")
 @click.option("--api", is_flag=True, help="Use remote API instead of local model")
-@click.option("--api-url", default="https://sleep-production.up.railway.app")
-@click.option("--start-epoch", default=9, type=int)
-def batch(folder: str, output: str, api: bool, api_url: str, start_epoch: int):
+@click.option("--api-url", default=DEFAULT_API_URL)
+@click.option(
+    "--api-key",
+    envvar="MORA_API_KEY",
+    default=None,
+    help="API key for the remote server (or set MORA_API_KEY). Only needed if the server requires one.",
+)
+@click.option("--start-epoch", default=2, type=int)
+def batch(folder: str, output: str, api: bool, api_url: str, api_key: Optional[str], start_epoch: int):
     """
     Score all WAV files in a folder.
 
     FOLDER: Path to folder containing WAV files
     """
-    import os
-
     folder_path = Path(folder)
     output_path = Path(output)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -133,9 +144,10 @@ def batch(folder: str, output: str, api: bool, api_url: str, start_epoch: int):
 
         try:
             if api:
-                scores, _ = score_via_api(wav_file, api_url, start_epoch)
+                scores, summary = score_via_api(wav_file, api_url, start_epoch, api_key)
             else:
-                scores, _ = score_locally(wav_file, start_epoch)
+                scores, summary = score_locally(wav_file, start_epoch)
+            display_reliability(summary.get("reliability"))
 
             output_file = output_path / f"{wav_file.stem}_scores.csv"
             export_to_csv(scores, output_file)
@@ -146,13 +158,21 @@ def batch(folder: str, output: str, api: bool, api_url: str, start_epoch: int):
 
 
 @cli.command()
-@click.option("--api-url", default="https://sleep-production.up.railway.app")
-def info(api_url: str):
-    """Show information about the model."""
+@click.option("--api-url", default=DEFAULT_API_URL)
+@click.option(
+    "--api-key",
+    envvar="MORA_API_KEY",
+    default=None,
+    help="API key for the remote server (or set MORA_API_KEY). Only needed if the server requires one.",
+)
+def info(api_url: str, api_key: Optional[str]):
+    """Show information about the model served by the API."""
     import requests
 
     try:
-        response = requests.get(f"{api_url}/api/v1/model/info", timeout=10)
+        response = requests.get(
+            f"{api_url}/api/v1/model/info", headers=_auth_headers(api_key), timeout=10
+        )
         response.raise_for_status()
         data = response.json()
 
@@ -168,62 +188,49 @@ def info(api_url: str):
 
 
 def score_locally(file_path: Path, start_epoch: int) -> tuple:
-    """Score a file using the local model."""
-    import pandas as pd
-    from scipy.io import wavfile
+    """
+    Score a file with the local model, using the SAME code path as the API
+    (backend ScoringService): model metadata picks the feature pipeline and
+    normalization, signal QC marks bad epochs Unscored, and recording-level
+    reliability warnings are computed. Requires `pip install -r requirements.txt`
+    from the repo root (backend deps). Model file: MORA_MODEL_PATH, else the
+    *.pkl in backend/models/.
+    """
+    try:
+        from app.core.config import settings
+        from app.core.model_loader import ModelManager
+        from app.services.scoring_service import ScoringService
+    except ImportError as e:
+        raise click.ClickException(
+            f"Local scoring needs the backend dependencies ({e}). "
+            "Run `pip install -r requirements.txt` from the repo root, or use --api."
+        )
 
-    # Import the standalone feature package
-    from sleep_features import apply_rule_based_filter, generate_features
+    click.echo(f"  Loading model from {settings.MODEL_PATH}")
+    manager = ModelManager()
+    manager.load()
+    if not manager.is_loaded:
+        raise click.ClickException(
+            f"Model not found at {settings.MODEL_PATH}. Set MORA_MODEL_PATH or use --api."
+        )
 
-    # Try to find and load model
-    model, label_encoder = load_local_model()
-
-    # Load WAV file
-    click.echo("  Loading WAV file...")
-    samplerate, data = wavfile.read(file_path)
-
-    if len(data.shape) != 2 or data.shape[1] != 2:
-        raise ValueError("Expected stereo WAV file (2 channels)")
-
-    df = pd.DataFrame({"eeg": data[:, 0], "emg": data[:, 1]})
-
-    # Extract features
-    click.echo("  Extracting features...")
-    features = generate_features(df, start_epoch=start_epoch)
-
-    # Get feature columns from model config
-    feature_cols = [
-        "EEG_quantile_80", "EEG_ptp", "EEG_ss", "EMG_std",
-        "EMG_events", "EMG_ptp", "delta_rel", "theta_rel", "theta_over_delta"
-    ]
-    X = features[feature_cols]
-
-    # Predict
     click.echo("  Scoring...")
-    predictions = model.predict(X)
-    decoded = label_encoder.inverse_transform(predictions)
-
-    # Apply rule-based filter
-    filtered = list(apply_rule_based_filter(decoded))
-
-    # Per-epoch signal QC -> Unscored; recording-level reliability warnings
-    from sleep_features.qc import compute_qc_flags
-    from sleep_features.reliability import assess_recording, emg_dynamic_range
-
-    qc_flags = [bool(x) for x in compute_qc_flags(df, samplerate=samplerate)["qc_flag"][: len(filtered)]]
-    for i, bad in enumerate(qc_flags):
-        if bad:
-            filtered[i] = "Unscored"
-    report = assess_recording(qc_flags, emg_dynamic_range(df, samplerate=samplerate))
-
-    # Calculate summary
-    summary = calculate_summary(filtered)
-    summary["reliability"] = report.to_dict()
-
-    return filtered, summary
+    result = ScoringService(manager).score(
+        file_path.read_bytes(), start_epoch=start_epoch, include_signals=False
+    )
+    # Default to the UNFILTERED scores, matching the web app's default view.
+    scores = [e.score for e in result.unfiltered_epochs]
+    summary = calculate_summary(scores)
+    summary["reliability"] = result.reliability.model_dump() if result.reliability else None
+    summary["model_version"] = manager.version
+    return scores, summary
 
 
-def score_via_api(file_path: Path, api_url: str, start_epoch: int) -> tuple:
+def _auth_headers(api_key: Optional[str]) -> dict:
+    return {"X-API-Key": api_key} if api_key else {}
+
+
+def score_via_api(file_path: Path, api_url: str, start_epoch: int, api_key: Optional[str] = None) -> tuple:
     """Score a file using the remote API."""
     import requests
 
@@ -231,46 +238,31 @@ def score_via_api(file_path: Path, api_url: str, start_epoch: int) -> tuple:
 
     with open(file_path, "rb") as f:
         files = {"file": (file_path.name, f, "audio/wav")}
-        data = {"start_epoch": start_epoch}
+        data = {"start_epoch": start_epoch, "include_signals": "false"}
 
         response = requests.post(
             f"{api_url}/api/v1/score",
             files=files,
             data=data,
+            headers=_auth_headers(api_key),
             timeout=300,  # 5 minute timeout for large files
         )
 
+    if response.status_code in (401, 403):
+        raise click.ClickException(
+            "The API requires a key. Pass --api-key or set MORA_API_KEY."
+        )
     if response.status_code != 200:
-        raise Exception(f"API error: {response.status_code} - {response.text}")
+        raise click.ClickException(f"API error: {response.status_code} - {response.text}")
 
     result = response.json()
-    # API returns epochs as [{epoch, score, timestamp_seconds}, ...]
-    scores = [e["score"] for e in result.get("epochs", [])]
+    # Use the UNFILTERED scores, matching the web app's default view.
+    scores = [e["score"] for e in result.get("unfiltered_epochs") or result.get("epochs", [])]
     summary = calculate_summary(scores)
     summary["reliability"] = result.get("reliability")
+    summary["model_version"] = result.get("model_version")
 
     return scores, summary
-
-
-def load_local_model():
-    """Load the local XGBoost model."""
-    import joblib
-
-    # Try multiple paths
-    possible_paths = [
-        Path(__file__).parent.parent / "model_artifacts" / "XGBoost_1.2.4" / "XGBoost_1.2.4.pkl",
-        Path(__file__).parent.parent / "backend" / "models" / "XGBoost_1.2.4.pkl",
-    ]
-
-    for model_path in possible_paths:
-        if model_path.exists():
-            click.echo(f"  Loading model from {model_path}")
-            model, metadata, label_encoder = joblib.load(model_path)
-            return model, label_encoder
-
-    raise FileNotFoundError(
-        "Model not found. Try using --api flag for remote scoring, or ensure model file exists."
-    )
 
 
 def calculate_summary(scores: list) -> dict:
@@ -279,15 +271,17 @@ def calculate_summary(scores: list) -> dict:
 
     counts = Counter(scores)
     total = len(scores)
+    scorable = total - counts.get("Unscored", 0)
 
     summary = {}
     for state in ["Wake", "Non REM", "REM", "Unscored"]:
         count = counts.get(state, 0)
         if state == "Unscored" and count == 0:
             continue
+        denom = total if state == "Unscored" else scorable
         summary[state] = {
             "count": count,
-            "percentage": round(100 * count / total, 1) if total > 0 else 0,
+            "percentage": round(100 * count / denom, 1) if denom > 0 else 0,
         }
 
     # Add time in each state (assuming 10s epochs)

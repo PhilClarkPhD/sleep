@@ -11,6 +11,17 @@ from pydantic_settings import BaseSettings
 from sleep_features.config import MODEL_FEATURE_COLS
 
 
+def _default_model_path() -> Path:
+    backend_dir = Path(__file__).resolve().parent.parent.parent
+    models_dir = backend_dir / "models"
+    candidates = [
+        p for p in models_dir.glob("*.pkl") if not p.name.endswith("_ood.pkl")
+    ] if models_dir.exists() else []
+    if candidates:
+        return max(candidates, key=lambda p: p.stat().st_mtime)
+    return backend_dir.parent / "model_artifacts" / "XGBoost_1.2.4" / "XGBoost_1.2.4.pkl"
+
+
 class Settings(BaseSettings):
     """Application settings."""
 
@@ -47,12 +58,10 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
     # Model settings
-    # Default: look in backend/models/ (for Docker), fallback to model_artifacts/ (for local dev)
-    MODEL_PATH: Path = (
-        Path(__file__).parent.parent.parent / "models" / "XGBoost_1.2.4.pkl"
-        if (Path(__file__).parent.parent.parent / "models" / "XGBoost_1.2.4.pkl").exists()
-        else Path(__file__).parent.parent.parent.parent / "model_artifacts" / "XGBoost_1.2.4" / "XGBoost_1.2.4.pkl"
-    )
+    # Default: the single *.pkl in backend/models/ (ignoring *_ood.pkl). If there
+    # are several, the most recently modified wins. Falls back to the committed
+    # model_artifacts/ copy for local dev. Override with MORA_MODEL_PATH.
+    MODEL_PATH: Path = _default_model_path()
 
     # Feature columns expected by the model (in order).
     # Canonical list lives in sleep_features.config (single source of truth).

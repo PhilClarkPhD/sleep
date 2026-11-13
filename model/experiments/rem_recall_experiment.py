@@ -13,7 +13,7 @@ Phase 1: cost-sensitive operating point via NESTED leave-one-animal-out.
          operating point -> no selection leakage.
 
 Usage:
-    python -m model.rem_recall_experiment --v2 <fs_v2.csv>
+    python -m model.experiments.rem_recall_experiment --v2 <fs_v2.csv>
 """
 
 import argparse

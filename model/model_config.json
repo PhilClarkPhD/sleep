@@ -2,9 +2,9 @@
   "model_version": "1.2.4",
   "model_name": "XGBoost",
   "paths": {
-    "artifacts_path": "/Users/phil/philclarkphd/sleep/model_artifacts",
-    "feature_store_directory": "/Users/phil/philclarkphd/sleep/feature_store/",
-    "feature_store_table": "features_2025-01-02_22-20-56.csv"
+    "artifacts_path": "model_artifacts",
+    "feature_store_directory": "feature_store",
+    "feature_store_table": "features_2026-10-25_22-51-28.csv"
   },
   "feature_cols": [
     "EEG_quantile_80",
@@ -24,18 +24,50 @@
   "time_series_index": "epoch",
   "train_size": 0.75,
   "search_space": {
-    "n_estimators": [100, 200, 300],
-    "max_depth": [3, 5, 7],
-    "learning_rate": [0.1, 0.01, 0.001],
-    "subsample": [0.6, 0.8, 1.0],
-    "colsample_bytree": [0.6, 0.8, 1.0],
-    "gamma": [0, 0.1, 0.2],
-    "reg_alpha": [0, 0.01, 0.1],
-    "reg_lambda": [0, 0.01, 0.1]
+    "n_estimators": [
+      100,
+      200,
+      300
+    ],
+    "max_depth": [
+      3,
+      5,
+      7
+    ],
+    "learning_rate": [
+      0.1,
+      0.01,
+      0.001
+    ],
+    "subsample": [
+      0.6,
+      0.8,
+      1.0
+    ],
+    "colsample_bytree": [
+      0.6,
+      0.8,
+      1.0
+    ],
+    "gamma": [
+      0,
+      0.1,
+      0.2
+    ],
+    "reg_alpha": [
+      0,
+      0.01,
+      0.1
+    ],
+    "reg_lambda": [
+      0,
+      0.01,
+      0.1
+    ]
   },
   "random_state": 42,
   "cv_folds": 5,
   "n_iter": 50,
   "eval_metric": "f1_weighted",
-  "notes": "Test updated rule-based filter"
+  "notes": "v1 feature set (9 cols), robust_mad normalization, 10-animal 2026-10-25 store. Replace feature_store_table with your own build."
 }

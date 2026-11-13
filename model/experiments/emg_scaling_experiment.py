@@ -20,7 +20,7 @@ Evaluation: pooled leave-one-animal-out, v2 + REM extras, no filter, REM weight
 1 (fast) and optionally the nested cost-sensitive selection for the best variant.
 
 Usage:
-    python -m model.emg_scaling_experiment --v2 <fs_v2.csv> [--nested]
+    python -m model.experiments.emg_scaling_experiment --v2 <fs_v2.csv> [--nested]
 """
 
 import argparse
@@ -30,8 +30,8 @@ import pandas as pd
 
 from sleep_features.config import FEATURE_SETS, UNSCORED_LABEL
 from model.diagnostics import evaluate_model
-from model.rem_phase23_experiment import augment_features, loo_run, loo_run_nested
-from model.rem_recall_experiment import GROUP_COL, REM, TARGET_COL, TIME_COL
+from model.experiments.rem_phase23_experiment import augment_features, loo_run, loo_run_nested
+from model.experiments.rem_recall_experiment import GROUP_COL, REM, TARGET_COL, TIME_COL
 
 EMG_AMP = ["EMG_std", "EMG_ptp"]
 CONTEXT_SRC = "EMG_std"  # temporal context columns EMG_std_roll3 / EMG_std_diff1

@@ -1,3 +1,5 @@
+> ARCHIVED (2026-11-13): historical planning document from the 2025 refactor. File paths and status may be out of date; see README.md for current docs.
+
 # Mora Sleep Scoring - Refactor Review
 
 ## Phase 1: Backend API - COMPLETED

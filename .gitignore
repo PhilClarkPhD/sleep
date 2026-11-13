@@ -1,7 +1,6 @@
 model_artifacts/**/*.csv
 .direnv/
 .direnv/
-*model_config.json
 *fs_config.json
 *.DS_Store
 .envrc

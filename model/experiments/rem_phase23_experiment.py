@@ -15,7 +15,7 @@ Pipelines compared (all pooled LOO):
   6. combined    v2+extra, cost-sensitive (nested), HMM decode
 
 Usage:
-    python -m model.rem_phase23_experiment --v2 <fs_v2.csv>
+    python -m model.experiments.rem_phase23_experiment --v2 <fs_v2.csv>
 """
 
 import argparse
@@ -28,7 +28,7 @@ from xgboost import XGBClassifier
 from sleep_features import apply_rule_based_filter
 from sleep_features.config import FEATURE_SETS, UNSCORED_LABEL
 from model.diagnostics import evaluate_model
-from model.rem_recall_experiment import BASE_PARAMS, _fit, GROUP_COL, TARGET_COL, TIME_COL, REM
+from model.experiments.rem_recall_experiment import BASE_PARAMS, _fit, GROUP_COL, TARGET_COL, TIME_COL, REM
 
 EPS = 1e-9
 PRECISION_FLOOR = 0.85

@@ -22,7 +22,7 @@ Optionally (E) a label-quality check for animals that ship two disagreeing score
 files: on disputed epochs, which file does the model side with?
 
 Usage:
-    python -m model.diagnose_animals --v2 feature_store/<v2>.csv \
+    python -m model.experiments.diagnose_animals --v2 feature_store/<v2>.csv \
         --data "training_data/Filtered Scores 2" [--skip-raw] [--focus ZZ01 ZZ05 ZZ27]
 """
 
@@ -42,8 +42,8 @@ from sleep_features.discovery import discover_recordings
 from sleep_features.io import load_wav
 from sleep_features.qc import compute_qc_flags
 from sleep_features.scores import align_scores, load_scores
-from model.rem_phase23_experiment import augment_features
-from model.rem_recall_experiment import GROUP_COL, REM, TARGET_COL, TIME_COL, _fit
+from model.experiments.rem_phase23_experiment import augment_features
+from model.experiments.rem_recall_experiment import GROUP_COL, REM, TARGET_COL, TIME_COL, _fit
 
 KEY_FEATS = ["theta_over_delta", "theta_rel", "theta_dominance", "delta_rel",
              "EMG_std", "emg_atonia", "sigma_rel", "spectral_entropy"]
