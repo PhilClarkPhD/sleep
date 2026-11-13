@@ -28,6 +28,12 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+# Entry-point bootstrap: ensure the repo root is importable so `sleep_features`
+# resolves regardless of how this script is launched.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 import click
 
 # Version
@@ -166,9 +172,8 @@ def score_locally(file_path: Path, start_epoch: int) -> tuple:
     import pandas as pd
     from scipy.io import wavfile
 
-    # Import local modules
-    sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
-    from app.ml.sleep_functions import apply_rule_based_filter, generate_features
+    # Import the standalone feature package
+    from sleep_features import apply_rule_based_filter, generate_features
 
     # Try to find and load model
     model, label_encoder = load_local_model()
@@ -199,10 +204,21 @@ def score_locally(file_path: Path, start_epoch: int) -> tuple:
     decoded = label_encoder.inverse_transform(predictions)
 
     # Apply rule-based filter
-    filtered = apply_rule_based_filter(decoded)
+    filtered = list(apply_rule_based_filter(decoded))
+
+    # Per-epoch signal QC -> Unscored; recording-level reliability warnings
+    from sleep_features.qc import compute_qc_flags
+    from sleep_features.reliability import assess_recording, emg_dynamic_range
+
+    qc_flags = [bool(x) for x in compute_qc_flags(df, samplerate=samplerate)["qc_flag"][: len(filtered)]]
+    for i, bad in enumerate(qc_flags):
+        if bad:
+            filtered[i] = "Unscored"
+    report = assess_recording(qc_flags, emg_dynamic_range(df, samplerate=samplerate))
 
     # Calculate summary
     summary = calculate_summary(filtered)
+    summary["reliability"] = report.to_dict()
 
     return filtered, summary
 
@@ -228,8 +244,10 @@ def score_via_api(file_path: Path, api_url: str, start_epoch: int) -> tuple:
         raise Exception(f"API error: {response.status_code} - {response.text}")
 
     result = response.json()
-    scores = result.get("scores", [])
-    summary = result.get("summary", {})
+    # API returns epochs as [{epoch, score, timestamp_seconds}, ...]
+    scores = [e["score"] for e in result.get("epochs", [])]
+    summary = calculate_summary(scores)
+    summary["reliability"] = result.get("reliability")
 
     return scores, summary
 
@@ -263,8 +281,10 @@ def calculate_summary(scores: list) -> dict:
     total = len(scores)
 
     summary = {}
-    for state in ["Wake", "Non REM", "REM"]:
+    for state in ["Wake", "Non REM", "REM", "Unscored"]:
         count = counts.get(state, 0)
+        if state == "Unscored" and count == 0:
+            continue
         summary[state] = {
             "count": count,
             "percentage": round(100 * count / total, 1) if total > 0 else 0,
@@ -285,7 +305,7 @@ def display_summary(summary: dict):
     click.echo(f"{'State':<12} {'Epochs':>8} {'Time':>10} {'%':>8}")
     click.echo("-" * 40)
 
-    for state in ["Wake", "Non REM", "REM"]:
+    for state in ["Wake", "Non REM", "REM", "Unscored"]:
         if state in summary:
             s = summary[state]
             click.echo(
@@ -293,6 +313,22 @@ def display_summary(summary: dict):
             )
 
     click.echo("-" * 40)
+    display_reliability(summary.get("reliability"))
+
+
+def display_reliability(report: Optional[dict]):
+    """Display recording-level reliability warnings (whole-recording, not per-epoch)."""
+    if not report:
+        return
+    warnings = report.get("warnings") or []
+    if not warnings:
+        ood = report.get("ood_percent")
+        ood_txt = f", OOD {ood:.1f}%" if ood is not None else ""
+        click.echo(f"Recording quality: OK (QC fail {report.get('qc_fail_percent', 0):.2f}%{ood_txt})")
+        return
+    click.echo("\nWARNING: this recording may be harder to score. Review results carefully.")
+    for w in warnings:
+        click.echo(f"  - [{w['code']}] {w['metric']} = {w['value']} (threshold {w['threshold']}): {w['message']}")
 
 
 def export_to_csv(scores: list, output_path: Path):

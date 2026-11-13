@@ -1,26 +1,26 @@
 """
-Single source of truth for model constants.
+Model constants.
 
-Both the model training pipeline and the backend API should reference these.
+The canonical source of truth now lives in `sleep_features.config`. This module
+re-exports the names the model pipeline already imports, so existing imports
+(`from model.config import FEATURE_COLS`) keep working while there is a single
+definition shared with the feature package and the backend.
 """
 
-FEATURE_COLS = [
-    "EEG_quantile_80",
-    "EEG_ptp",
-    "EEG_ss",
-    "EMG_std",
-    "EMG_events",
-    "EMG_ptp",
-    "delta_rel",
-    "theta_rel",
-    "theta_over_delta",
+from sleep_features.config import (  # noqa: F401
+    DEFAULT_SAMPLERATE,
+    DELTA_BAND,
+    EPOCH_DURATION,
+    SLEEP_STATES,
+    THETA_BAND,
+)
+from sleep_features.config import MODEL_FEATURE_COLS as FEATURE_COLS
+
+__all__ = [
+    "FEATURE_COLS",
+    "EPOCH_DURATION",
+    "DEFAULT_SAMPLERATE",
+    "DELTA_BAND",
+    "THETA_BAND",
+    "SLEEP_STATES",
 ]
-
-EPOCH_DURATION = 10  # seconds
-DEFAULT_SAMPLERATE = 1000  # Hz
-
-# Frequency bands for power spectrum
-DELTA_BAND = (0.5, 4.0)
-THETA_BAND = (5.5, 8.5)
-
-SLEEP_STATES = ["Wake", "Non REM", "REM"]

@@ -12,3 +12,4 @@ feature_store/
 logs.log
 model_cards/
 *.ipynb_checkpoints
+.Rhistory

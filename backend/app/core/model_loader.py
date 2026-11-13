@@ -20,6 +20,7 @@ class ModelManager:
         self.model = None
         self.metadata: Dict[str, Any] = {}
         self.label_encoder = None
+        self.ood_detector = None
         self._loaded = False
 
     @property
@@ -44,10 +45,35 @@ class ModelManager:
         # Model is saved as tuple: (model, metadata_dict, label_encoder)
         model, metadata, label_encoder = joblib.load(model_path)
 
+        # Feature-code compatibility gate: refuse to serve a model whose feature
+        # math may differ from this backend's sleep_features code (MAJOR mismatch);
+        # warn on minor drift.
+        from sleep_features.config import check_feature_compatibility
+
+        model_fcv = metadata.get("feature_code_version") if isinstance(metadata, dict) else None
+        level, message = check_feature_compatibility(model_fcv)
+        if level == "error":
+            raise RuntimeError(message)
+        if level == "warn" and message:
+            logger.warning(message)
+
         self.model = model
         self.metadata = metadata
         self.label_encoder = label_encoder
         self._loaded = True
+
+        # Optionally load a co-located OOD detector (Layer B unscorable detection).
+        self.ood_detector = None
+        ood_meta = metadata.get("ood_detector") if isinstance(metadata, dict) else None
+        if ood_meta and ood_meta.get("file"):
+            ood_path = model_path.parent / ood_meta["file"]
+            if ood_path.exists():
+                from sleep_features.ood import MahalanobisOOD
+
+                self.ood_detector = MahalanobisOOD.load(ood_path)
+                logger.info(f"Loaded OOD detector from {ood_path}")
+            else:
+                logger.warning(f"OOD detector declared but not found: {ood_path}")
 
         logger.info(f"Model loaded successfully: {self.version}")
 

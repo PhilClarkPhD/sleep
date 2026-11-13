@@ -217,7 +217,8 @@ function App() {
                 to manually score epochs
               </li>
               <li>
-                <strong>Export:</strong> Download the scores as a CSV file when done
+                <strong>Export:</strong> Save the scores as a CSV file when done. In Chrome or
+                Edge you can pick an export folder once and every export goes straight there.
               </li>
             </ol>
           </div>

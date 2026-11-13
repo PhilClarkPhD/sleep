@@ -17,11 +17,10 @@ from pathlib import Path
 import joblib
 import pandas as pd
 
+from sleep_features import apply_rule_based_filter
+
 from model.config import FEATURE_COLS
 from model.diagnostics import evaluate_model, print_confusion_matrix
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
-from app.ml.sleep_functions import apply_rule_based_filter
 
 
 def load_model(model_path: str) -> tuple:

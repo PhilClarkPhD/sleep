@@ -97,6 +97,7 @@ async def score_file(
             model_version=model_manager.version,
             samplerate=result.samplerate,
             baseline_epoch=result.baseline_epoch,
+            reliability=result.reliability,
             signal_data=result.signal_data,
         )
 

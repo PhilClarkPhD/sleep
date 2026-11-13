@@ -6,8 +6,10 @@
 services:
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      # Build context is the repo root so the image can include the standalone
+      # sleep_features/ package alongside backend/app.
+      context: .
+      dockerfile: backend/Dockerfile
     ports:
       - "8000:8000"
     volumes:

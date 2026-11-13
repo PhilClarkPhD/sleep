@@ -29,17 +29,17 @@ from sklearn.metrics import f1_score
 from sklearn.preprocessing import LabelEncoder
 from xgboost import XGBClassifier
 
+from sleep_features import apply_rule_based_filter
+from sleep_features.config import FEATURE_CODE_VERSION
+
 from model.config import FEATURE_COLS
 from model.cross_validation import get_cv_splitter
 from model.diagnostics import evaluate_model
+from model.ood import MahalanobisOOD
 from model.save_model import make_save_dir, save_model_artifacts, save_test_data
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 log = logging.getLogger(__name__)
-
-# Add parent to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
-from app.ml.sleep_functions import apply_rule_based_filter
 
 
 def load_config(config_path: str) -> dict:
@@ -150,6 +150,19 @@ def run(config_path: str, skip_tuning: bool = False):
     log.info(f"Loading features from {feature_path}")
     df = pd.read_csv(feature_path)
 
+    # Inherit the feature-store's normalization lineage if a manifest exists, so
+    # the serving backend can reproduce the exact feature pipeline this model
+    # was trained on. Legacy stores (no manifest) leave this unset.
+    manifest_path = Path(feature_path).with_suffix("").as_posix() + ".manifest.json"
+    feature_manifest = None
+    if Path(manifest_path).exists():
+        with open(manifest_path) as f:
+            feature_manifest = json.load(f)
+        log.info(
+            "Found feature-store manifest: normalization=%s",
+            feature_manifest.get("normalization"),
+        )
+
     if config.get("drop_unscored", True):
         n_before = len(df)
         df = df.loc[df[target_col] != "Unscored"]
@@ -215,6 +228,13 @@ def run(config_path: str, skip_tuning: bool = False):
     artifacts_path = config["paths"]["artifacts_path"]
     save_dir = make_save_dir(artifacts_path, model_id)
 
+    # Fit an out-of-distribution detector on the training feature distribution
+    # and save it alongside the model. Serving uses it to flag "Unscorable" epochs.
+    ood = MahalanobisOOD().fit(X_all.values, feature_cols=feature_cols)
+    ood_filename = f"{model_id}_ood.pkl"
+    ood.save(os.path.join(save_dir, ood_filename))
+    log.info(f"OOD detector saved to {save_dir}/{ood_filename}")
+
     metadata = {
         "model_name": model_name,
         "model_version": model_version,
@@ -234,6 +254,15 @@ def run(config_path: str, skip_tuning: bool = False):
         "search_duration": search_duration,
         "fit_duration": fit_duration,
         "use_rule_based_filter": use_filter,
+        # Feature pipeline lineage (consumed by the serving backend to pick the
+        # matching normalization pipeline).
+        "normalization": (feature_manifest or {}).get("normalization"),
+        "feature_store_manifest": (feature_manifest or {}).get("output_csv"),
+        # Feature-code version this model was trained against — the serving
+        # backend checks it against its own to detect feature-math drift.
+        "feature_code_version": (feature_manifest or {}).get("feature_code_version")
+        or FEATURE_CODE_VERSION,
+        "ood_detector": {"file": ood_filename, "quantile": ood.quantile},
         # Held-out test metrics
         "test_f1_weighted": test_score,
         "test_cohen_kappa": metrics.cohen_kappa,

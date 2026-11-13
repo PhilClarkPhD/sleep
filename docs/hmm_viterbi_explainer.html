@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HMM / Viterbi — interactive sleep-scoring explainer</title>
+<style>
+  :root{--ink:#1f2933;--muted:#6b7684;--line:#e3e8ef;--bg:#f7f9fc;--card:#fff;
+    --wake:#4c6ef5;--nrem:#12b886;--rem:#e8590c;--accent:#0b7285;--good:#2b8a3e;--warn:#e67700;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:860px;margin:0 auto;padding:28px 22px 60px;}
+  h1{font-size:22px;margin:0 0 4px;} h2{font-size:15px;color:var(--accent);margin:22px 0 8px;}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:6px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:16px 18px;margin:12px 0;}
+  .ctrl{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end;}
+  .ctrl label{font-size:12.5px;font-weight:600;display:block;margin-bottom:4px;}
+  .ctrl .v{color:var(--accent);font-variant-numeric:tabular-nums;}
+  input[type=range]{width:230px;}
+  .legend{font-size:12px;color:var(--muted);margin-top:8px;}
+  .chip{display:inline-block;padding:1px 7px;border-radius:5px;color:#fff;font-weight:700;font-size:12px;}
+  .cW{background:var(--wake)} .cN{background:var(--nrem)} .cR{background:var(--rem)}
+  table{border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;margin-top:4px;}
+  td,th{border:1px solid var(--line);padding:3px 8px;text-align:center;}
+  .seqrow{display:flex;gap:5px;align-items:center;margin:6px 0;font-size:13px;flex-wrap:wrap;}
+  .seqrow .tag{width:120px;color:var(--muted);font-weight:600;}
+  .cell{width:26px;text-align:center;border-radius:5px;color:#fff;font-weight:700;padding:2px 0;}
+  .note{font-size:13px;margin:5px 0;}
+  .note b{color:var(--accent);}
+  .diff{background:#fff4e6;border-left:3px solid var(--warn);padding:6px 10px;border-radius:6px;margin:5px 0;font-size:13px;}
+  .same{background:#ebfbee;border-left:3px solid var(--good);padding:6px 10px;border-radius:6px;font-size:13px;}
+  code{background:#eef2f7;padding:1px 5px;border-radius:4px;font-size:12.5px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>How the HMM decodes a night of sleep</h1>
+  <div class="sub">The per-epoch classifier scores each epoch alone. The HMM (via the Viterbi
+    algorithm) finds the most plausible <i>whole sequence</i> — filling in dropped REM and erasing
+    impossible flickers. Drag the sliders and watch it decide.</div>
+
+  <div class="card">
+    <div class="ctrl">
+      <div>
+        <label>Transition “stickiness” &nbsp;<span class="v" id="pv"></span></label>
+        <input type="range" id="stick" min="0.50" max="0.98" step="0.01" value="0.90">
+        <div class="legend">P(stay in same state). High = sleep rarely jumps → strong smoothing.</div>
+      </div>
+      <div>
+        <label>Epoch 7 — classifier’s REM probability &nbsp;<span class="v" id="rv"></span></label>
+        <input type="range" id="e7rem" min="0.20" max="0.70" step="0.01" value="0.42">
+        <div class="legend">The “wobbly” middle epoch of a REM bout. Low = classifier misses it.</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>The trellis</h2>
+  <div class="sub">Circle size &amp; opacity = classifier probability for that state. Dashed ring =
+    the classifier’s pick (argmax). Solid orange line = the HMM’s decoded path.</div>
+  <div class="card" style="overflow-x:auto"><div id="trellis"></div></div>
+
+  <div class="card">
+    <div class="seqrow"><span class="tag">Classifier (argmax):</span><span id="seqArg"></span></div>
+    <div class="seqrow"><span class="tag">HMM (Viterbi):</span><span id="seqVit"></span></div>
+    <div id="diffs" style="margin-top:10px"></div>
+  </div>
+
+  <h2>Transition matrix (built from the stickiness slider)</h2>
+  <div class="sub">In the real model this is <i>counted from the training animals’</i> stage
+    sequences — never the test animal. Here it’s a simple symmetric version so one slider controls it.</div>
+  <div class="card"><div id="tmat"></div></div>
+
+  <h2>What Viterbi actually does</h2>
+  <div class="card note">
+    <b>1.</b> Score every possible <i>path</i> by (product of emissions along it) × (product of
+    transitions between its states).<br>
+    <b>2.</b> A single left→right sweep keeps, for each epoch &amp; state, the best score to reach it
+    and a back-pointer — so it searches all 3<sup>N</sup> paths in O(N) time.<br>
+    <b>3.</b> Backtrack from the best final state to get the one optimal sequence.<br><br>
+    The magic: at epoch 7 the classifier may prefer NREM, but hopping <code>REM→NREM→REM</code> in
+    adjacent epochs costs <i>two</i> rare-transition penalties — so staying in REM wins, and the
+    dropped REM epoch is recovered.
+  </div>
+</div>
+
+<script>
+const STATES = ["Wake","NREM","REM"];
+const CLS = ["cW","cN","cR"];
+const COL = ["#4c6ef5","#12b886","#e8590c"];
+const LET = ["W","N","R"];
+
+// Emissions: [W, N, R] per epoch. A designed night with an isolated REM flicker
+// (epoch 3) and a REM bout with a wobbly middle (epoch 7).
+function buildEmissions(e7rem){
+  return [
+    [0.05,0.90,0.05],   // 1 NREM
+    [0.05,0.90,0.05],   // 2 NREM
+    [0.10,0.35,0.55],   // 3 lone REM flicker inside NREM  -> should be ERASED
+    [0.05,0.90,0.05],   // 4 NREM
+    [0.05,0.90,0.05],   // 5 NREM
+    [0.05,0.15,0.80],   // 6 REM bout starts
+    [0.10, 0.90-e7rem, e7rem], // 7 wobbly middle -> should be RECOVERED
+    [0.05,0.20,0.75],   // 8 REM
+    [0.85,0.10,0.05],   // 9 Wake
+  ];
+}
+
+function transMatrix(p){
+  const o=(1-p)/2;
+  return [[p,o,o],[o,p,o],[o,o,p]];
+}
+
+function viterbi(emis, trans){
+  const K=3, T=emis.length, logT=trans.map(r=>r.map(Math.log)), start=Math.log(1/3);
+  const dp=[], bp=[];
+  dp[0]=emis[0].map(e=>start+Math.log(e)); bp[0]=[0,0,0];
+  for(let t=1;t<T;t++){ dp[t]=[]; bp[t]=[];
+    for(let k=0;k<K;k++){ let best=-Infinity,arg=0;
+      for(let j=0;j<K;j++){ const s=dp[t-1][j]+logT[j][k]; if(s>best){best=s;arg=j;} }
+      dp[t][k]=best+Math.log(emis[t][k]); bp[t][k]=arg; } }
+  let last=0,bv=-Infinity;
+  for(let k=0;k<K;k++) if(dp[T-1][k]>bv){bv=dp[T-1][k];last=k;}
+  const path=new Array(T); path[T-1]=last;
+  for(let t=T-1;t>0;t--) path[t-1]=bp[t][path[t]];
+  return path;
+}
+
+const argmax = row => row.indexOf(Math.max(...row));
+
+function drawTrellis(emis, vit){
+  const T=emis.length, mL=60, mT=26, colW=80, rowH=66, r0=8, r1=24;
+  const W=mL+T*colW+20, H=mT+3*rowH+40;
+  const x=t=>mL+t*colW+34, y=i=>mT+i*rowH+22;
+  let s=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="inherit">`;
+  // state labels
+  for(let i=0;i<3;i++) s+=`<text x="8" y="${y(i)+4}" font-size="12" font-weight="700" fill="${COL[i]}">${STATES[i]}</text>`;
+  // viterbi path line
+  let pts=vit.map((k,t)=>`${x(t)},${y(k)}`).join(" ");
+  s+=`<polyline points="${pts}" fill="none" stroke="#e8590c" stroke-width="3.5" opacity="0.9"/>`;
+  // nodes
+  for(let t=0;t<T;t++){
+    const am=argmax(emis[t]);
+    for(let i=0;i<3;i++){
+      const p=emis[t][i], rr=r0+p*(r1-r0);
+      s+=`<circle cx="${x(t)}" cy="${y(i)}" r="${rr}" fill="${COL[i]}" opacity="${0.22+0.75*p}"/>`;
+      if(i===am) s+=`<circle cx="${x(t)}" cy="${y(i)}" r="${r1+3}" fill="none" stroke="#868e96" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+      if(vit[t]===i) s+=`<circle cx="${x(t)}" cy="${y(i)}" r="${r1+6}" fill="none" stroke="#e8590c" stroke-width="2.5"/>`;
+      if(p>=0.30) s+=`<text x="${x(t)}" y="${y(i)+4}" font-size="10.5" font-weight="700" fill="#fff" text-anchor="middle">${p.toFixed(2)}</text>`;
+    }
+    s+=`<text x="${x(t)}" y="${H-16}" font-size="11.5" fill="#6b7684" text-anchor="middle">epoch ${t+1}</text>`;
+  }
+  s+=`</svg>`;
+  document.getElementById("trellis").innerHTML=s;
+}
+
+function seqHTML(path){ return path.map(k=>`<span class="cell ${CLS[k]}">${LET[k]}</span>`).join(""); }
+
+function tmatHTML(tr){
+  let h=`<table><tr><th></th><th>→Wake</th><th>→NREM</th><th>→REM</th></tr>`;
+  for(let i=0;i<3;i++){ h+=`<tr><th>${STATES[i]}</th>`;
+    for(let j=0;j<3;j++){ const v=tr[i][j]; const bg=i===j?"#e6fcf5":"#fff";
+      h+=`<td style="background:${bg}">${v.toFixed(2)}</td>`; } h+=`</tr>`; }
+  return h+`</table>`;
+}
+
+function render(){
+  const p=parseFloat(document.getElementById("stick").value);
+  const e7=parseFloat(document.getElementById("e7rem").value);
+  document.getElementById("pv").textContent=p.toFixed(2);
+  document.getElementById("rv").textContent=e7.toFixed(2);
+  const emis=buildEmissions(e7), tr=transMatrix(p);
+  const arg=emis.map(argmax), vit=viterbi(emis,tr);
+  drawTrellis(emis,vit);
+  document.getElementById("seqArg").innerHTML=seqHTML(arg);
+  document.getElementById("seqVit").innerHTML=seqHTML(vit);
+  document.getElementById("tmat").innerHTML=tmatHTML(tr);
+  // differences
+  let d="";
+  for(let t=0;t<emis.length;t++){
+    if(arg[t]!==vit[t]){
+      const verb = (vit[t]===2) ? "recovered REM" : (arg[t]===2 ? "erased a REM flicker" : "smoothed");
+      d+=`<div class="diff">Epoch ${t+1}: classifier said <span class="chip ${CLS[arg[t]]}">${STATES[arg[t]]}</span>
+          → HMM <b>${verb}</b> → <span class="chip ${CLS[vit[t]]}">${STATES[vit[t]]}</span></div>`;
+    }
+  }
+  if(!d) d=`<div class="same">Classifier and HMM agree on every epoch — at this stickiness the
+      temporal prior isn’t strong enough to override the per-epoch calls. Try raising it.</div>`;
+  document.getElementById("diffs").innerHTML=d;
+}
+document.getElementById("stick").addEventListener("input",render);
+document.getElementById("e7rem").addEventListener("input",render);
+render();
+</script>
+</body>
+</html>

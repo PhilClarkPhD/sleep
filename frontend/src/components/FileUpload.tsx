@@ -58,7 +58,8 @@ export function FileUpload() {
           result.summary,
           result.model_version,
           result.samplerate,
-          result.signal_data
+          result.signal_data,
+          result.reliability
         );
       } else {
         setError('Scoring failed');

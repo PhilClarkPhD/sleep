@@ -18,9 +18,14 @@ from fastapi.testclient import TestClient
 
 @pytest.fixture(scope="module")
 def client():
-    """Create test client for the FastAPI app."""
+    """Create test client for the FastAPI app.
+
+    Used as a context manager so the app's lifespan handler runs and the model
+    is loaded (modern Starlette only fires startup/shutdown inside the context).
+    """
     from app.main import app
-    return TestClient(app)
+    with TestClient(app) as c:
+        yield c
 
 
 @pytest.fixture

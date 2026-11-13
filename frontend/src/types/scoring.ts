@@ -21,6 +21,8 @@ export interface ScoringStats {
   rem_percent: number;
   recording_duration_seconds: number;
   recording_duration_hours: number;
+  unscorable_count?: number;    // Epochs marked Unscored by signal QC
+  unscorable_percent?: number;
 }
 
 /**
@@ -36,6 +38,27 @@ export interface SignalData {
   theta_power: number[];     // Relative theta power per epoch
 }
 
+/**
+ * Recording-level reliability warnings from the backend. These describe the
+ * whole recording (noisy, weak EMG contrast, unlike training data), not
+ * individual epochs.
+ */
+export interface ReliabilityWarning {
+  code: 'noisy' | 'weak_emg_contrast' | 'out_of_distribution' | string;
+  metric: string;
+  value: number;
+  threshold: number;
+  message: string;
+}
+
+export interface RecordingReliability {
+  level: 'ok' | 'warning';
+  qc_fail_percent: number;
+  emg_range_p05_p50: number | null;
+  ood_percent: number | null;
+  warnings: ReliabilityWarning[];
+}
+
 export interface ScoringResponse {
   success: boolean;
   epochs: EpochScore[];
@@ -44,6 +67,7 @@ export interface ScoringResponse {
   model_version: string;
   samplerate: number;
   baseline_epoch: number;
+  reliability?: RecordingReliability | null;  // Recording-level warnings
   signal_data?: SignalData;  // Optional signal data for visualization
 }
 

@@ -7,6 +7,7 @@
 import Plot from 'react-plotly.js';
 import { useAppStore } from '../store/useAppStore';
 import { SLEEP_COLORS_LIGHT, SLEEP_COLORS_DARK } from '../types/scoring';
+import { YAxisControl } from './YAxisControl';
 import type { SleepState } from '../types/scoring';
 import type { Layout } from 'plotly.js';
 
@@ -39,10 +40,13 @@ export function SignalPlot({ title, signalType, height = 200 }: SignalPlotProps)
     );
   }
 
-  // Get the epochs to display based on window size
+  // Show exactly `windowSize` epochs with the current one centred (for even
+  // sizes it sits just left of centre). Clamp at the recording edges so the
+  // window stays full rather than shrinking.
   const halfWindow = Math.floor(windowSize / 2);
-  const startEpoch = Math.max(0, currentEpoch - halfWindow);
-  const endEpoch = Math.min(epochs.length - 1, currentEpoch + halfWindow);
+  let startEpoch = Math.max(0, currentEpoch - halfWindow);
+  const endEpoch = Math.min(epochs.length - 1, startEpoch + windowSize - 1);
+  startEpoch = Math.max(0, endEpoch - windowSize + 1);
 
   // Build the data for the plot
   const signal = signalType === 'eeg' ? signalData.eeg : signalData.emg;
@@ -100,23 +104,26 @@ export function SignalPlot({ title, signalType, height = 200 }: SignalPlotProps)
   }
 
   // Calculate y-axis range.
-  // If the user has set a range on the axis, use it and keep it fixed as they
-  // navigate epochs. Otherwise auto-fit to the visible window.
-  let yRange: [number, number];
-  if (manualRange) {
-    yRange = manualRange;
-  } else {
-    const finiteY = yData.filter(y => isFinite(y));
-    const yMin = Math.min(...finiteY);
-    const yMax = Math.max(...finiteY);
-    const yPadding = (yMax - yMin) * 0.1;
-    yRange = [yMin - yPadding, yMax + yPadding];
+  // If the user has locked the axis (via the Lock button, typed values, or a
+  // drag-zoom), use that range and keep it fixed while navigating epochs.
+  // Otherwise auto-fit to the visible window.
+  let yMin = Infinity;
+  let yMax = -Infinity;
+  for (const y of yData) {
+    if (isFinite(y)) {
+      if (y < yMin) yMin = y;
+      if (y > yMax) yMax = y;
+    }
   }
+  if (!isFinite(yMin)) { yMin = -1; yMax = 1; }
+  const yPadding = (yMax - yMin) * 0.1 || 1;
+  const autoRange: [number, number] = [yMin - yPadding, yMax + yPadding];
+  const yRange: [number, number] = manualRange ?? autoRange;
 
-  // Capture manual axis edits (drag-zoom or typing an endpoint) so they persist.
-  // Double-clicking the plot autoranges, which clears the manual range.
-  // Note: editing a single endpoint fires only that one key (e.g. just
-  // "yaxis.range[1]"), so merge partial edits with the current range.
+  // Capture drag-zoom edits so they persist as a locked range.
+  // Double-clicking the plot autoranges, which unlocks it.
+  // Note: a one-sided edit fires only that key (e.g. just "yaxis.range[1]"),
+  // so merge partial edits with the current range.
   const handleRelayout = (e: Record<string, unknown>) => {
     if (e['yaxis.autorange']) {
       setYAxisRange(signalType, null);
@@ -143,64 +150,52 @@ export function SignalPlot({ title, signalType, height = 200 }: SignalPlotProps)
   };
 
   return (
-    <Plot
-      data={[
-        {
-          x: xData,
-          y: yData,
-          type: 'scattergl',
-          mode: 'lines',
-          line: { color: 'black', width: 1 },
-          hoverinfo: 'skip',
-        },
-      ]}
-      layout={{
-        title: {
-          text: title,
-          font: { size: 14 },
-        },
-        xaxis: {
-          title: { text: recordingStartTime ? 'Time' : 'Time (s)' },
-          showgrid: true,
-          gridcolor: '#e5e7eb',
-          range: [0, (endEpoch - startEpoch + 1) * epochDuration],
-          tickmode: 'array' as const,
-          tickvals,
-          ticktext,
-        },
-        yaxis: {
-          title: { text: signalType === 'eeg' ? 'EEG (μV)' : 'EMG (μV)' },
-          showgrid: true,
-          gridcolor: '#e5e7eb',
-          range: yRange,
-        },
-        shapes: shapes as Layout['shapes'],
-        margin: { l: 60, r: 20, t: 40, b: 40 },
-        height,
-        autosize: true,
-        showlegend: false,
-      }}
-      config={{
-        displayModeBar: false,
-        responsive: true,
-        // Allow clicking the axis min/max labels to type a value; keep everything
-        // else (titles, shapes, legend) locked so only the axis range is editable.
-        editable: true,
-        edits: {
-          axisTitleText: false,
-          titleText: false,
-          annotationText: false,
-          annotationPosition: false,
-          annotationTail: false,
-          legendText: false,
-          legendPosition: false,
-          colorbarTitleText: false,
-          colorbarPosition: false,
-          shapePosition: false,
-        },
-      }}
-      onRelayout={handleRelayout}
-      style={{ width: '100%' }}
-    />
+    <div className="relative">
+      <YAxisControl plot={signalType} autoRange={autoRange} />
+      <Plot
+        data={[
+          {
+            x: xData,
+            y: yData,
+            type: 'scattergl',
+            mode: 'lines',
+            line: { color: 'black', width: 1 },
+            hoverinfo: 'skip',
+          },
+        ]}
+        layout={{
+          title: {
+            text: title,
+            font: { size: 14 },
+          },
+          xaxis: {
+            title: { text: recordingStartTime ? 'Time' : 'Time (s)' },
+            showgrid: true,
+            gridcolor: '#e5e7eb',
+            range: [0, (endEpoch - startEpoch + 1) * epochDuration],
+            tickmode: 'array' as const,
+            tickvals,
+            ticktext,
+          },
+          yaxis: {
+            title: { text: signalType === 'eeg' ? 'EEG (μV)' : 'EMG (μV)' },
+            showgrid: true,
+            gridcolor: '#e5e7eb',
+            range: yRange,
+          },
+          shapes: shapes as Layout['shapes'],
+          margin: { l: 60, r: 20, t: 40, b: 40 },
+          height,
+          autosize: true,
+          showlegend: false,
+        }}
+        config={{
+          displayModeBar: false,
+          responsive: true,
+        }}
+        onRelayout={handleRelayout}
+        style={{ width: '100%' }}
+      />
+    </div>
   );
 }

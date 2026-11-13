@@ -8,9 +8,15 @@
  * - Clear all scores
  */
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useAppStore } from '../store/useAppStore';
-import { downloadFile } from '../api/sleepApi';
+import {
+  canChooseExportFolder,
+  canChooseSaveLocation,
+  pickExportFolder,
+  saveTextFile,
+  type SaveOutcome,
+} from '../utils/fileSave';
 import type { EpochScore, SleepState } from '../types/scoring';
 
 export function ExportPanel() {
@@ -21,6 +27,8 @@ export function ExportPanel() {
     hasUnsavedChanges,
     recordingStartTime,
     lightDarkPhases,
+    exportDirHandle,
+    setExportDirHandle,
     importScores,
     clearAllScores,
     getTimestampForEpoch,
@@ -28,6 +36,33 @@ export function ExportPanel() {
   } = useAppStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [lastSave, setLastSave] = useState<string | null>(null);
+
+  const handleChooseFolder = async () => {
+    const handle = await pickExportFolder();
+    if (handle) {
+      setExportDirHandle(handle);
+      setLastSave(null);
+    }
+  };
+
+  // Save via folder -> dialog -> download, and tell the user where it went.
+  const save = async (content: string, filename: string) => {
+    const outcome: SaveOutcome = await saveTextFile(content, filename, 'text/csv', exportDirHandle);
+    switch (outcome.method) {
+      case 'folder':
+        setLastSave(`Saved ${outcome.filename} to “${outcome.folder}”`);
+        break;
+      case 'dialog':
+        setLastSave(`Saved ${outcome.filename}`);
+        break;
+      case 'download':
+        setLastSave(`Downloaded ${outcome.filename}`);
+        break;
+      case 'cancelled':
+        break;
+    }
+  };
 
   if (epochs.length === 0) {
     return null;
@@ -66,7 +101,7 @@ export function ExportPanel() {
 
     const csv = header + rows;
     const baseName = fileName?.replace('.wav', '') || 'scores';
-    downloadFile(csv, `${baseName}_scores.csv`, 'text/csv');
+    void save(csv, `${baseName}_scores.csv`);
   };
 
   // Export summary breakdown
@@ -115,7 +150,7 @@ export function ExportPanel() {
     }
 
     const baseName = fileName?.replace('.wav', '') || 'breakdown';
-    downloadFile(csv, `${baseName}_breakdown.csv`, 'text/csv');
+    void save(csv, `${baseName}_breakdown.csv`);
   };
 
   // Import scores from CSV
@@ -198,6 +233,40 @@ export function ExportPanel() {
     <div className="bg-white rounded-lg shadow p-4">
       <h2 className="text-lg font-semibold mb-4">Import / Export</h2>
 
+      {/* Export destination */}
+      <div className="mb-3 p-2 bg-gray-50 rounded text-sm">
+        {canChooseExportFolder() ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-gray-600">Export folder:</span>
+            <span className={exportDirHandle ? 'font-medium text-gray-800' : 'text-gray-500 italic'}>
+              {exportDirHandle ? exportDirHandle.name : 'not set (a save dialog will open)'}
+            </span>
+            <button
+              onClick={handleChooseFolder}
+              className="ml-auto px-2 py-1 border border-gray-300 rounded hover:bg-white"
+              title="Choose a folder once; exports are then written there with no dialog"
+            >
+              {exportDirHandle ? 'Change…' : 'Choose folder…'}
+            </button>
+            {exportDirHandle && (
+              <button
+                onClick={() => setExportDirHandle(null)}
+                className="px-2 py-1 text-gray-500 hover:text-gray-700"
+                title="Go back to a save dialog for each export"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        ) : canChooseSaveLocation() ? (
+          <span className="text-gray-600">Exports open a save dialog so you can pick the location.</span>
+        ) : (
+          <span className="text-gray-600">
+            This browser saves exports to its Downloads folder. Use Chrome or Edge to choose a location.
+          </span>
+        )}
+      </div>
+
       <div className="flex flex-wrap gap-3">
         {/* Export scores */}
         <button
@@ -238,6 +307,10 @@ export function ExportPanel() {
           Clear Scores
         </button>
       </div>
+
+      {lastSave && (
+        <p className="mt-3 text-sm text-green-700">{lastSave}</p>
+      )}
 
       {/* Unsaved changes warning */}
       {hasUnsavedChanges && (

@@ -34,7 +34,8 @@ export function EpochViewer() {
     resetYAxisRanges,
   } = useAppStore();
 
-  const yAxisIsManual = yAxisRanges.eeg !== null || yAxisRanges.emg !== null;
+  const yAxisIsManual =
+    yAxisRanges.eeg !== null || yAxisRanges.emg !== null || yAxisRanges.power !== null;
 
   const [findEpochInput, setFindEpochInput] = useState('');
   const [showFindDialog, setShowFindDialog] = useState(false);
@@ -163,17 +164,16 @@ export function EpochViewer() {
             onChange={(e) => setWindowSize(parseInt(e.target.value, 10))}
             className="px-2 py-1 border rounded"
           >
-            <option value={1}>1 epoch</option>
-            <option value={3}>3 epochs</option>
-            <option value={5}>5 epochs</option>
-            <option value={7}>7 epochs</option>
+            {[1, 3, 5, 7, 9, 11, 15, 20].map((n) => (
+              <option key={n} value={n}>{n} {n === 1 ? 'epoch' : 'epochs'}</option>
+            ))}
           </select>
         </div>
 
         {/* Y-axis controls */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">
-            Y-axis: <span className={yAxisIsManual ? 'text-blue-700 font-medium' : ''}>
+          <span className="text-sm text-gray-600" title="Use the Lock Y button on each plot to freeze its range and type a min/max">
+            Y-axes: <span className={yAxisIsManual ? 'text-blue-700 font-medium' : ''}>
               {yAxisIsManual ? 'locked' : 'auto'}
             </span>
           </span>
@@ -181,9 +181,9 @@ export function EpochViewer() {
             onClick={resetYAxisRanges}
             disabled={!yAxisIsManual}
             className="px-3 py-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm"
-            title="Clear the fixed Y-axis and go back to auto-scaling"
+            title="Clear all fixed Y-axes (EEG, EMG, power spectrum) and go back to auto-scaling"
           >
-            Reset Y-axis
+            Reset Y-axes
           </button>
         </div>
 

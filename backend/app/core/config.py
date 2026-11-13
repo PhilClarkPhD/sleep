@@ -8,6 +8,8 @@ from typing import List, Optional, Set
 
 from pydantic_settings import BaseSettings
 
+from sleep_features.config import MODEL_FEATURE_COLS
+
 
 class Settings(BaseSettings):
     """Application settings."""
@@ -52,19 +54,11 @@ class Settings(BaseSettings):
         else Path(__file__).parent.parent.parent.parent / "model_artifacts" / "XGBoost_1.2.4" / "XGBoost_1.2.4.pkl"
     )
 
-    # Feature columns expected by the model (in order)
-    # Canonical list lives in model/config.py — keep in sync
-    FEATURE_COLS: List[str] = [
-        "EEG_quantile_80",
-        "EEG_ptp",
-        "EEG_ss",
-        "EMG_std",
-        "EMG_events",
-        "EMG_ptp",
-        "delta_rel",
-        "theta_rel",
-        "theta_over_delta",
-    ]
+    # Feature columns expected by the model (in order).
+    # Canonical list lives in sleep_features.config (single source of truth).
+    # NOTE: this is the default for legacy models; a model artifact may override
+    # via its metadata "feature_cols" (see ScoringService).
+    FEATURE_COLS: List[str] = list(MODEL_FEATURE_COLS)
 
     # File upload settings
     MAX_UPLOAD_SIZE_MB: int = 500

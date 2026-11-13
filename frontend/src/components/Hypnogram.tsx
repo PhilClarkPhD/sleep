@@ -11,11 +11,12 @@ import { useAppStore } from '../store/useAppStore';
 import { SLEEP_COLORS, type SleepState } from '../types/scoring';
 import type { Layout } from 'plotly.js';
 
-// Map sleep states to numeric values for y-axis
+// Map sleep states to numeric values for y-axis.
+// Conventional layout: Wake on top, NREM in the middle, REM at the bottom.
 const SLEEP_Y_VALUES: Record<SleepState, number> = {
   'Wake': 2,
-  'REM': 1,
-  'Non REM': 0,
+  'Non REM': 1,
+  'REM': 0,
   'Unscored': 3,
 };
 
@@ -136,8 +137,6 @@ export function Hypnogram() {
               width: 2,
               color: '#1f2937',
             },
-            fill: 'tozeroy',
-            fillcolor: 'rgba(59, 130, 246, 0.1)',
             hovertemplate: 'Epoch %{pointIndex}<br>%{text}<br>Time: %{x:.2f} hours<extra></extra>',
             text: epochs.map(e => e.score),
           },
@@ -158,7 +157,7 @@ export function Hypnogram() {
             title: { text: 'Sleep State' },
             tickmode: 'array' as const,
             tickvals: [0, 1, 2, 3],
-            ticktext: ['NREM', 'REM', 'Wake', '?'],
+            ticktext: ['REM', 'NREM', 'Wake', '?'],
             range: [-0.5, 3.5],
             showgrid: true,
             gridcolor: '#e5e7eb',

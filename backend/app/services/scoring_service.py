@@ -11,10 +11,23 @@ import numpy as np
 import pandas as pd
 from scipy.io import wavfile
 
+import sleep_features as sleep
+from sleep_features.qc import compute_qc_flags
+from sleep_features.reliability import assess_recording, emg_dynamic_range
+
 from app.core.config import settings
 from app.core.model_loader import ModelManager
-from app.ml import sleep_functions as sleep
-from app.schemas.scoring import EpochScore, SignalData, ScoringResponse, ScoringStats
+from app.schemas.scoring import (
+    EpochScore,
+    RecordingReliability,
+    SignalData,
+    ScoringResponse,
+    ScoringStats,
+)
+
+# Label used for epochs that fail signal QC. Matches the lab's hand-scoring
+# convention for artifact epochs and the frontend's SleepState type.
+UNSCORED_LABEL = "Unscored"
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +41,7 @@ class ScoringResult:
     summary: ScoringStats
     samplerate: int
     baseline_epoch: int
+    reliability: Optional[RecordingReliability] = None
     signal_data: Optional[SignalData] = None
 
 
@@ -39,6 +53,81 @@ class ScoringService:
 
     def __init__(self, model_manager: ModelManager):
         self.model_manager = model_manager
+
+    def _model_feature_cols(self) -> List[str]:
+        """Feature columns this model expects (artifact metadata wins)."""
+        meta = self.model_manager.metadata or {}
+        return meta.get("feature_cols") or settings.FEATURE_COLS
+
+    def _qc_mask(self, df: pd.DataFrame, n: int, samplerate: int) -> List[bool]:
+        """
+        Per-epoch unscorable mask from signal QC only (Layer A: flat, clipped,
+        non-finite, gross-amplitude artifacts). Model-agnostic, so it runs for
+        every model. Distributional OOD (Layer B) is deliberately NOT applied
+        per-epoch; see _assess_reliability.
+        """
+        qc = compute_qc_flags(df, samplerate=samplerate)
+        flags = [bool(x) for x in qc["qc_flag"].to_numpy()[:n]]
+        if len(flags) < n:
+            flags += [False] * (n - len(flags))
+        n_bad = sum(flags)
+        if n_bad:
+            logger.info(f"Signal QC flagged {n_bad}/{n} epochs as {UNSCORED_LABEL}")
+        return flags
+
+    def _assess_reliability(
+        self, df: pd.DataFrame, features: pd.DataFrame, qc_flags: List[bool], samplerate: int
+    ) -> RecordingReliability:
+        """
+        Recording-level reliability warnings: QC-fail rate, EMG dynamic range,
+        and (when the model ships a Mahalanobis detector) the OOD rate. The OOD
+        rate is a whole-recording signal: on a globally shifted animal 15-30% of
+        epochs cross the per-epoch threshold while the model still scores them
+        at ~0.9 accuracy, so blanking them would discard mostly-correct scores.
+        """
+        ood_flags = None
+        detector = getattr(self.model_manager, "ood_detector", None)
+        if detector is not None:
+            cols = detector.feature_cols_ or self._model_feature_cols()
+            ood_flags = detector.is_ood(features[cols].to_numpy())
+
+        emg_range = emg_dynamic_range(
+            df, window=settings.EPOCH_DURATION_SECONDS, samplerate=samplerate
+        )
+        report = assess_recording(qc_flags, emg_range, ood_flags)
+        for w in report.warnings:
+            logger.warning(f"Reliability [{w.code}]: {w.message}")
+        d = report.to_dict()
+        if not np.isfinite(d["emg_range_p05_p50"]):
+            d["emg_range_p05_p50"] = None
+        return RecordingReliability(**d)
+
+    def _generate_features(
+        self, df: pd.DataFrame, samplerate: int, start_epoch: int
+    ) -> pd.DataFrame:
+        """
+        Generate the feature table using the pipeline the loaded model expects.
+
+        A model artifact may declare its normalization strategy in metadata
+        ("normalization": {"strategy": ...}). Models trained on the new
+        feature store use automatic per-recording normalization (no baseline
+        epoch); legacy models fall back to baseline-epoch normalization.
+        """
+        meta = self.model_manager.metadata or {}
+        strategy = (meta.get("normalization") or {}).get("strategy")
+
+        if strategy in ("robust_mad", "none", "baseline_epoch"):
+            logger.info(f"Generating features via '{strategy}' pipeline")
+            return sleep.generate_feature_table(
+                df,
+                normalization=strategy,
+                samplerate=samplerate,
+                start_epoch=start_epoch if strategy == "baseline_epoch" else None,
+            )
+
+        # Legacy model with no declared strategy: original baseline-epoch path.
+        logger.info(f"Generating features via legacy path (baseline epoch={start_epoch})")
+        return sleep.generate_features(df, start_epoch=start_epoch)
 
     def _downsample_signal(self, signal: np.ndarray, target_samples: int) -> List[float]:
         """Downsample a signal to target number of samples using decimation."""
@@ -173,33 +262,45 @@ class ScoringService:
         # Step 1: Load WAV file
         df, samplerate = self.load_wav_file(file_bytes)
 
-        # Step 2: Generate features
-        logger.info(f"Generating features with baseline epoch={start_epoch}")
-        metrics = sleep.generate_features(df, start_epoch=start_epoch)
+        # Step 2: Generate features (pipeline chosen by the model's metadata)
+        metrics = self._generate_features(df, samplerate, start_epoch)
 
         # Step 3: Extract model features in correct order
-        features = metrics[settings.FEATURE_COLS]
+        features = metrics[self._model_feature_cols()]
 
         # Step 4: Get predictions
         logger.info(f"Running predictions on {len(features)} epochs")
         predictions = self.model_manager.predict(features)
 
-        # Step 5: Build unfiltered epoch list
+        # Step 5: Apply rule-based filter (on the model's state predictions)
         epoch_duration = settings.EPOCH_DURATION_SECONDS
+        filtered_predictions = sleep.apply_rule_based_filter(predictions)
+
+        # Step 6: Mark epochs that fail signal QC as Unscored (Layer A only).
+        qc_flags = self._qc_mask(df, len(features), samplerate)
+        predictions = list(predictions)
+        filtered_predictions = list(filtered_predictions)
+        for i, bad in enumerate(qc_flags):
+            if bad:
+                predictions[i] = UNSCORED_LABEL
+                filtered_predictions[i] = UNSCORED_LABEL
+
+        # Step 6b: Recording-level reliability warnings (QC rate, EMG contrast, OOD rate).
+        reliability = self._assess_reliability(df, features, qc_flags, samplerate)
+
         unfiltered_epochs = [
             EpochScore(epoch=i, score=score, timestamp_seconds=i * epoch_duration)
             for i, score in enumerate(predictions)
         ]
-
-        # Step 6: Apply rule-based filter
-        filtered_predictions = sleep.apply_rule_based_filter(predictions)
         epochs = [
             EpochScore(epoch=i, score=score, timestamp_seconds=i * epoch_duration)
             for i, score in enumerate(filtered_predictions)
         ]
 
-        # Step 7: Compute summary statistics (from filtered)
+        # Step 7: Compute summary statistics (percentages over SCORABLE epochs)
         total = len(filtered_predictions)
+        unscorable_count = filtered_predictions.count(UNSCORED_LABEL)
+        scorable = total - unscorable_count
         wake_count = filtered_predictions.count("Wake")
         nrem_count = filtered_predictions.count("Non REM")
         rem_count = filtered_predictions.count("REM")
@@ -208,13 +309,15 @@ class ScoringService:
         summary = ScoringStats(
             total_epochs=total,
             wake_count=wake_count,
-            wake_percent=round(100 * wake_count / total, 2) if total > 0 else 0,
+            wake_percent=round(100 * wake_count / scorable, 2) if scorable > 0 else 0,
             nrem_count=nrem_count,
-            nrem_percent=round(100 * nrem_count / total, 2) if total > 0 else 0,
+            nrem_percent=round(100 * nrem_count / scorable, 2) if scorable > 0 else 0,
             rem_count=rem_count,
-            rem_percent=round(100 * rem_count / total, 2) if total > 0 else 0,
+            rem_percent=round(100 * rem_count / scorable, 2) if scorable > 0 else 0,
             recording_duration_seconds=duration_seconds,
             recording_duration_hours=round(duration_seconds / 3600, 2),
+            unscorable_count=unscorable_count,
+            unscorable_percent=round(100 * unscorable_count / total, 2) if total > 0 else 0,
         )
 
         logger.info(f"Scoring complete: {summary}")
@@ -231,6 +334,7 @@ class ScoringService:
             summary=summary,
             samplerate=samplerate,
             baseline_epoch=start_epoch,
+            reliability=reliability,
             signal_data=signal_data,
         )
 
@@ -249,7 +353,7 @@ class ScoringService:
         Returns:
             Tuple of (epoch list, features DataFrame)
         """
-        df, _ = self.load_wav_file(file_bytes)
-        metrics = sleep.generate_features(df, start_epoch=start_epoch)
+        df, samplerate = self.load_wav_file(file_bytes)
+        metrics = self._generate_features(df, samplerate, start_epoch)
         epochs = list(range(len(metrics)))
         return epochs, metrics

@@ -21,7 +21,7 @@ class EpochScore(BaseModel):
     """A single epoch's score."""
 
     epoch: int = Field(description="Epoch index (0-based)")
-    score: str = Field(description="Sleep state: 'Wake', 'Non REM', or 'REM'")
+    score: str = Field(description="Sleep state: 'Wake', 'Non REM', 'REM', or 'Unscored' (failed signal QC)")
     timestamp_seconds: float = Field(description="Start time of epoch in seconds")
 
 
@@ -37,6 +37,35 @@ class SignalData(BaseModel):
     theta_power: List[float] = Field(description="Relative theta power per epoch")
 
 
+class ReliabilityWarning(BaseModel):
+    """One recording-level reliability warning."""
+
+    code: str = Field(description="'noisy' | 'weak_emg_contrast' | 'out_of_distribution'")
+    metric: str
+    value: float
+    threshold: float
+    message: str
+
+
+class RecordingReliability(BaseModel):
+    """
+    Label-free, recording-level scorability assessment. Computed on every
+    scoring call. These are WARNINGS for the whole recording, not per-epoch
+    verdicts: a high OOD rate means "this animal looks unlike the training
+    data, review carefully", not "these epochs cannot be scored".
+    """
+
+    level: str = Field(description="'ok' or 'warning'")
+    qc_fail_percent: float = Field(description="% of epochs failing signal QC (Layer A)")
+    emg_range_p05_p50: Optional[float] = Field(
+        default=None, description="p05/p50 of per-epoch raw EMG std; near 1 = weak atonia contrast"
+    )
+    ood_percent: Optional[float] = Field(
+        default=None, description="% of epochs beyond the OOD threshold; null if the model has no detector"
+    )
+    warnings: List[ReliabilityWarning] = Field(default_factory=list)
+
+
 class ScoringStats(BaseModel):
     """Summary statistics for a scoring session."""
 
@@ -49,6 +78,10 @@ class ScoringStats(BaseModel):
     rem_percent: float
     recording_duration_seconds: float
     recording_duration_hours: float
+    # Epochs marked "Unscored" by per-epoch signal QC (flat/clipped/non-finite/
+    # gross-amplitude artifacts). Percentages above are over SCORABLE epochs.
+    unscorable_count: int = 0
+    unscorable_percent: float = 0.0
 
 
 class ScoringResponse(BaseModel):
@@ -61,6 +94,10 @@ class ScoringResponse(BaseModel):
     model_version: str
     samplerate: int
     baseline_epoch: int
+    reliability: Optional[RecordingReliability] = Field(
+        default=None,
+        description="Recording-level reliability warnings (QC rate, EMG contrast, OOD rate)"
+    )
     signal_data: Optional[SignalData] = Field(
         default=None,
         description="Signal data for visualization (included when include_signals=true)"

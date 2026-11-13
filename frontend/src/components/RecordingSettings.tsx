@@ -81,14 +81,26 @@ export function RecordingSettings() {
     clearAllPhases();
   };
 
-  const handlePreset = (lightStart: string, lightEnd: string, darkStart: string, darkEnd: string) => {
+  // 12h/12h schedule: lights on at `lightsOnHour`, off 12 hours later.
+  const handlePreset = (lightsOnHour: number) => {
     setErrorMessage(null);
+    const hh = (h: number) => `${String(h % 24).padStart(2, '0')}:00`;
+    const on = hh(lightsOnHour);
+    const off = hh(lightsOnHour + 12);
     // Clear existing phases first
     clearAllPhases();
     // Add the preset phases
-    addLightDarkPhase('light', lightStart, lightEnd);
-    addLightDarkPhase('dark', darkStart, darkEnd);
+    addLightDarkPhase('light', on, off);
+    addLightDarkPhase('dark', off, on);
   };
+
+  const PRESETS: { lightsOn: number; label: string }[] = [
+    { lightsOn: 2, label: '2am / 2pm' },
+    { lightsOn: 3, label: '3am / 3pm' },
+    { lightsOn: 4, label: '4am / 4pm' },
+    { lightsOn: 6, label: '6am / 6pm' },
+    { lightsOn: 7, label: '7am / 7pm' },
+  ];
 
   return (
     <div className="bg-white rounded-lg shadow p-4">
@@ -139,7 +151,7 @@ export function RecordingSettings() {
             {lightDarkPhases.map((phase) => (
               <div
                 key={phase.id}
-                className={`flex items-center gap-2 p-2 rounded ${
+                className={`flex flex-wrap items-center gap-2 p-2 rounded ${
                   phase.type === 'light' ? 'bg-yellow-50' : 'bg-gray-200'
                 }`}
               >
@@ -180,7 +192,7 @@ export function RecordingSettings() {
         )}
 
         {/* Add new phase */}
-        <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+        <div className="flex flex-wrap items-center gap-2 p-2 bg-gray-50 rounded">
           <select
             value={newPhaseType}
             onChange={(e) => setNewPhaseType(e.target.value as PhaseType)}
@@ -204,7 +216,7 @@ export function RecordingSettings() {
           />
           <button
             onClick={handleAddPhase}
-            className="ml-auto px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+            className="ml-auto px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 whitespace-nowrap"
           >
             Add Phase
           </button>
@@ -216,20 +228,20 @@ export function RecordingSettings() {
 
       {/* Quick presets */}
       <div className="border-t pt-3">
-        <p className="text-sm text-gray-600 mb-2">Quick presets (replaces existing):</p>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handlePreset('07:00', '19:00', '19:00', '07:00')}
-            className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
-          >
-            12h/12h (7am-7pm)
-          </button>
-          <button
-            onClick={() => handlePreset('06:00', '18:00', '18:00', '06:00')}
-            className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
-          >
-            12h/12h (6am-6pm)
-          </button>
+        <p className="text-sm text-gray-600 mb-2">
+          12h/12h presets — lights on / lights off (replaces existing):
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {PRESETS.map((p) => (
+            <button
+              key={p.lightsOn}
+              onClick={() => handlePreset(p.lightsOn)}
+              className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
+              title={`Light ${String(p.lightsOn).padStart(2, '0')}:00–${String(p.lightsOn + 12).padStart(2, '0')}:00, dark otherwise`}
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
       </div>
     </div>

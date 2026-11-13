@@ -6,7 +6,7 @@ import { useAppStore } from '../store/useAppStore';
 import { SLEEP_COLORS } from '../types/scoring';
 
 export function ScoringResults() {
-  const { summary, modelVersion, samplerate, fileName, showFiltered, unfilteredEpochs, toggleFilter } = useAppStore();
+  const { summary, reliability, modelVersion, samplerate, fileName, showFiltered, unfilteredEpochs, toggleFilter } = useAppStore();
   const hasUnfilteredData = unfilteredEpochs.length > 0;
 
   if (!summary) {
@@ -71,6 +71,36 @@ export function ScoringResults() {
       {fileName && (
         <p className="text-sm text-gray-600 mb-4">
           File: <span className="font-medium">{fileName}</span>
+        </p>
+      )}
+
+      {/* Recording-level reliability banner */}
+      {reliability && reliability.warnings.length > 0 && (
+        <div className="mb-4 p-4 rounded-lg bg-amber-50 border border-amber-300 text-amber-900">
+          <div className="font-semibold mb-1">
+            Review recommended: this recording may be harder to score
+          </div>
+          <ul className="list-disc ml-5 text-sm space-y-1">
+            {reliability.warnings.map((w) => (
+              <li key={w.code}>
+                <span className="font-medium">{w.metric}: {w.value}</span> (threshold {w.threshold}). {w.message}
+              </li>
+            ))}
+          </ul>
+          <div className="text-xs text-amber-800 mt-2">
+            These are warnings about the whole recording, not individual epochs. Scores are still provided; check them against the signals.
+          </div>
+        </div>
+      )}
+      {reliability && reliability.warnings.length === 0 && (
+        <p className="mb-4 text-sm text-green-700">
+          Recording quality checks passed (QC fail {reliability.qc_fail_percent.toFixed(2)}%
+          {reliability.ood_percent !== null && `, OOD ${reliability.ood_percent.toFixed(1)}%`}).
+        </p>
+      )}
+      {summary.unscorable_count !== undefined && summary.unscorable_count > 0 && (
+        <p className="mb-4 text-sm text-gray-600">
+          {summary.unscorable_count.toLocaleString()} epochs ({summary.unscorable_percent?.toFixed(2)}%) marked Unscored by signal QC (flat, clipped, or artifact).
         </p>
       )}
 

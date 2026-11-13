@@ -6,9 +6,13 @@
  */
 
 import { create } from 'zustand';
-import type { EpochScore, ScoringStats, ModelInfo, SignalData, SleepState, LightDarkPhase, PhaseType } from '../types/scoring';
+import type { EpochScore, ScoringStats, ModelInfo, SignalData, SleepState, LightDarkPhase, PhaseType, RecordingReliability } from '../types/scoring';
 
 export type UploadState = 'idle' | 'uploading' | 'processing' | 'complete' | 'error';
+
+// Plots whose Y-axis can be locked to a fixed range.
+export type YAxisPlot = 'eeg' | 'emg' | 'power';
+export type YAxisRanges = Record<YAxisPlot, [number, number] | null>;
 
 interface AppState {
   // Upload state
@@ -19,12 +23,16 @@ interface AppState {
   // File info
   fileName: string | null;
 
+  // Export destination (File System Access API). null = browser download / save dialog.
+  exportDirHandle: FileSystemDirectoryHandle | null;
+
   // Scoring results
   epochs: EpochScore[];          // Currently displayed (filtered or unfiltered)
   filteredEpochs: EpochScore[];  // Stored separately for toggling
   unfilteredEpochs: EpochScore[];
   showFiltered: boolean;
   summary: ScoringStats | null;
+  reliability: RecordingReliability | null;
   modelVersion: string | null;
   samplerate: number | null;
   baselineEpoch: number;
@@ -37,11 +45,11 @@ interface AppState {
 
   // Navigation state
   currentEpoch: number;
-  windowSize: number;  // Number of epochs visible (1, 3, 5, or 7)
+  windowSize: number;  // Number of epochs visible (1 to 20)
 
-  // Y-axis display state — manual range per signal that persists across epochs.
-  // null means auto-fit to the visible window (default).
-  yAxisRanges: { eeg: [number, number] | null; emg: [number, number] | null };
+  // Y-axis display state — manual range per plot that persists across epochs.
+  // null means auto-fit to the visible data (default).
+  yAxisRanges: YAxisRanges;
 
   // Editing state
   editedEpochs: Set<number>;  // Tracks which epochs have been manually edited
@@ -56,6 +64,7 @@ interface AppState {
   setUploadProgress: (progress: number) => void;
   setError: (message: string | null) => void;
   setFileName: (name: string | null) => void;
+  setExportDirHandle: (handle: FileSystemDirectoryHandle | null) => void;
   setBaselineEpoch: (epoch: number) => void;
   setScoringResults: (
     epochs: EpochScore[],
@@ -63,7 +72,8 @@ interface AppState {
     summary: ScoringStats,
     modelVersion: string,
     samplerate: number,
-    signalData?: SignalData
+    signalData?: SignalData,
+    reliability?: RecordingReliability | null
   ) => void;
   toggleFilter: () => void;
   setModelInfo: (info: ModelInfo) => void;
@@ -74,7 +84,7 @@ interface AppState {
   goToPrevEpoch: () => void;
   goToNextREM: () => void;
   setWindowSize: (size: number) => void;
-  setYAxisRange: (signal: 'eeg' | 'emg', range: [number, number] | null) => void;
+  setYAxisRange: (plot: YAxisPlot, range: [number, number] | null) => void;
   resetYAxisRanges: () => void;
 
   // Scoring actions
@@ -100,11 +110,13 @@ const initialState = {
   uploadProgress: 0,
   errorMessage: null,
   fileName: null,
+  exportDirHandle: null as FileSystemDirectoryHandle | null,
   epochs: [] as EpochScore[],
   filteredEpochs: [] as EpochScore[],
   unfilteredEpochs: [] as EpochScore[],
   showFiltered: true,
   summary: null,
+  reliability: null,
   modelVersion: null,
   samplerate: null,
   baselineEpoch: 2,
@@ -112,7 +124,7 @@ const initialState = {
   modelInfo: null,
   currentEpoch: 0,
   windowSize: 5,
-  yAxisRanges: { eeg: null, emg: null } as { eeg: [number, number] | null; emg: [number, number] | null },
+  yAxisRanges: { eeg: null, emg: null, power: null } as YAxisRanges,
   editedEpochs: new Set<number>(),
   hasUnsavedChanges: false,
   recordingStartTime: null as string | null,
@@ -130,14 +142,17 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setFileName: (fileName) => set({ fileName }),
 
+  setExportDirHandle: (exportDirHandle) => set({ exportDirHandle }),
+
   setBaselineEpoch: (baselineEpoch) => set({ baselineEpoch }),
 
-  setScoringResults: (epochs, unfilteredEpochs, summary, modelVersion, samplerate, signalData) => set({
+  setScoringResults: (epochs, unfilteredEpochs, summary, modelVersion, samplerate, signalData, reliability) => set({
     epochs,
     filteredEpochs: epochs,
     unfilteredEpochs,
     showFiltered: true,
     summary,
+    reliability: reliability || null,
     modelVersion,
     samplerate,
     signalData: signalData || null,
@@ -219,11 +234,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setWindowSize: (windowSize) => set({ windowSize }),
 
-  setYAxisRange: (signal, range) => set((state) => ({
-    yAxisRanges: { ...state.yAxisRanges, [signal]: range },
+  setYAxisRange: (plot, range) => set((state) => ({
+    yAxisRanges: { ...state.yAxisRanges, [plot]: range },
   })),
 
-  resetYAxisRanges: () => set({ yAxisRanges: { eeg: null, emg: null } }),
+  resetYAxisRanges: () => set({ yAxisRanges: { eeg: null, emg: null, power: null } }),
 
   // Scoring actions
   updateEpochScore: (epoch, score) => {
@@ -465,9 +480,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     return null;
   },
 
-  reset: () => set({
+  reset: () => set((state) => ({
     ...initialState,
     editedEpochs: new Set<number>(),
     lightDarkPhases: [],
-  }),
+    // The export folder is a session preference, not per-file state.
+    exportDirHandle: state.exportDirHandle,
+  })),
 }));
