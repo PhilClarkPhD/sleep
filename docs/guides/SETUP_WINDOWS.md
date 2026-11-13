@@ -115,6 +115,10 @@ have `sleep\training_data\Filtered Scores 2\ZZ05_BL\...`. Not needed to run the 
 `scripts\windows\`: double-click `start_backend.bat`, then `start_gui.bat`, then
 open http://localhost:3000 in Chrome or Edge.
 
+## Using PyCharm?
+
+See `PYCHARM.md` for the interpreter and run settings. Do this setup first.
+
 ## Windows cheat sheet for the other guides
 
 The other guides show Mac commands. Translate like this:

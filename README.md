@@ -27,6 +27,7 @@ Open the file, paste it (or point your assistant at it), and say what you want t
 |---|---|---|
 | Set up a Windows computer for the first time | [docs/guides/SETUP_WINDOWS.md](docs/guides/SETUP_WINDOWS.md) | Nothing; installs everything |
 | Set up a Mac for the first time | [docs/guides/SETUP.md](docs/guides/SETUP.md) | Python, Node |
+| Open the project in PyCharm | [docs/guides/PYCHARM.md](docs/guides/PYCHARM.md) | Setup done |
 | Run the GUI on my own machine and score a recording | [docs/guides/RUN_THE_APP.md](docs/guides/RUN_THE_APP.md) | Setup done |
 | Understand how the pieces fit together | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Nothing |
 | Retrain the model (new recordings, new labels) | [docs/guides/RETRAIN_MODEL.md](docs/guides/RETRAIN_MODEL.md) | Setup, labeled data |
